@@ -70,8 +70,8 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
     Name: `${record.pcfsystemfield509 || ''} ${record.pcfsystemfield511 || ''}`.trim(),
     id__c: record.pcfsystemfield515 || '',
     MobilePhone: '', // Not available in this response
-    Commission__c: record.pcfsystemfield703 || 22,
-    fulladress__c: `${record.pcfsystemfield530 || ''} ${record.pcfsystemfield532 || ''}, ${record.pcfsystemfield527 || ''}`.trim(),
+    Commission__c: (record.pcfsystemfield703 || 23) - 1, // Always subtract 1 from commission
+    fulladress__c: `${record.pcfsystemfield530 || ''} ${record.pcfsystemfield532 || ''}`.trim(), // Remove city field as it shows record ID
   };
 
   console.log('🔍 Final mapped leadData:', JSON.stringify(leadData, null, 2));
