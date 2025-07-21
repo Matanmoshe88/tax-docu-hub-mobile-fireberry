@@ -57,16 +57,19 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
 
   const opportunityData = await response.json() as FireberryOpportunity;
   console.log('✅ Opportunity data fetched successfully');
+  console.log('🔍 Raw Fireberry response:', JSON.stringify(opportunityData, null, 2));
 
   // Map Fireberry fields to our LeadData interface
   const leadData: LeadData = {
     Id: opportunityId,
-    Name: `${opportunityData.pcfsystemfield509} ${opportunityData.pcfsystemfield511}`,
-    id__c: opportunityData.pcfsystemfield515,
+    Name: `${opportunityData.pcfsystemfield509 || ''} ${opportunityData.pcfsystemfield511 || ''}`.trim(),
+    id__c: opportunityData.pcfsystemfield515 || '',
     MobilePhone: '', // Not available in Fireberry response
-    Commission__c: opportunityData.pcfsystemfield703,
-    fulladress__c: `${opportunityData.pcfsystemfield530} ${opportunityData.pcfsystemfield532}, ${opportunityData.pcfsystemfield527}`,
+    Commission__c: opportunityData.pcfsystemfield703 || 22,
+    fulladress__c: `${opportunityData.pcfsystemfield530 || ''} ${opportunityData.pcfsystemfield532 || ''}, ${opportunityData.pcfsystemfield527 || ''}`.trim(),
   };
+
+  console.log('🔍 Mapped leadData:', JSON.stringify(leadData, null, 2));
 
   return leadData;
 }
