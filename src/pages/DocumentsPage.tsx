@@ -95,10 +95,27 @@ export const DocumentsPage: React.FC = () => {
     }
   ]);
 
+  // Get docid from session storage (set during contract creation)
+  const getDocId = () => {
+    return sessionStorage.getItem('docid') || '';
+  };
+
+  // Map document IDs to Fireberry document types
+  const getDocumentType = (docId: string): string => {
+    const mapping: Record<string, string> = {
+      'id-card': 'id_photo',
+      'drivers-license': 'id_photo', // Both use same field
+      'id-supplement': 'appendix',
+      'bank-statement': 'bank_statement'
+    };
+    return mapping[docId] || '';
+  };
+
   // Load document status from session storage when data changes
   useEffect(() => {
     console.log('📋 DocumentsPage recordId from useSalesforceData:', recordId);
     console.log('📋 Current URL recordId should be: 00QWn000002zxExMAI');
+    console.log('📋 DocId for Fireberry updates:', getDocId());
     
     const documentsStatus = sessionStorage.getItem('documentsStatus');
     console.log('📋 Raw documentsStatus from session:', documentsStatus);
@@ -218,15 +235,33 @@ export const DocumentsPage: React.FC = () => {
       // Upload to storage
       const documentUrl = await uploadDocumentToStorage(file, docId);
 
-      // Send to Salesforce
-      toast({
-        title: "שולח ל-Salesforce...",
-        description: "מעביר את הקובץ למערכת הניהול",
-      });
+      // Send to Fireberry if docid exists
+      const docid = getDocId();
+      const documentType = getDocumentType(docId);
+      
+      if (docid && documentType) {
+        toast({
+          title: "שולח ל-Fireberry...",
+          description: "מעביר את הקובץ למערכת הניהול",
+        });
 
-      // Note: Individual document uploads are handled differently from signature+contract uploads
-      // For now, just store the document URL without calling Fireberry API
-      console.log('Document uploaded to storage, skipping Fireberry integration for individual documents');
+        const { data, error } = await supabase.functions.invoke('document-upload', {
+          body: {
+            docid: docid,
+            documentType: documentType,
+            documentUrl: documentUrl
+          }
+        });
+
+        if (error) {
+          console.error('❌ Document upload to Fireberry error:', error);
+          throw new Error(`Failed to update document in Fireberry: ${error.message}`);
+        }
+
+        console.log('✅ Document URL updated in Fireberry:', data);
+      } else {
+        console.log('⚠️ No docid found or invalid document type, skipping Fireberry update');
+      }
 
       // Update local state
       setDocuments(prev => prev.map(doc => 

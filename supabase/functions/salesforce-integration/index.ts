@@ -87,7 +87,15 @@ async function uploadDocumentToFireberry(
 
   const result = await response.json();
   console.log('✅ Document created successfully in Fireberry:', result);
-  return result;
+  
+  // Store the docid for later use
+  const docid = result.data?.Record?.customobject1004id;
+  if (docid) {
+    console.log('📝 Storing docid:', docid);
+    // You can store this in session storage or return it to the client
+  }
+  
+  return { ...result, docid };
 }
 
 serve(async (req) => {

@@ -164,6 +164,13 @@ export const SignaturePage: React.FC = () => {
     }
 
     console.log('✅ Salesforce integration successful:', data);
+    
+    // Store docid for document uploads
+    if (data?.docid) {
+      sessionStorage.setItem('docid', data.docid);
+      console.log('📝 Stored docid for document uploads:', data.docid);
+    }
+    
     return data;
   };
 
