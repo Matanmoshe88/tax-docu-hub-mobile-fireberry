@@ -12,6 +12,42 @@ interface DocumentUploadRequest {
   contractUrl: string;
 }
 
+async function testFireberryAPI(): Promise<any> {
+  console.log('🧪 Testing Fireberry API with minimal data');
+  
+  const tokenId = Deno.env.get('FIREBERRY_TOKEN_ID');
+  if (!tokenId) {
+    throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
+  }
+
+  // Try with just the required fields
+  const formData = new FormData();
+  formData.append('name', 'Test Document');
+  
+  console.log('📝 Test form data being sent:', {
+    name: 'Test Document'
+  });
+
+  const response = await fetch('https://api.powerlink.co.il/api/record/1004', {
+    method: 'POST',
+    headers: {
+      'TokenID': tokenId,
+    },
+    body: formData,
+  });
+
+  const responseText = await response.text();
+  console.log('🔍 API Response Status:', response.status);
+  console.log('🔍 API Response Headers:', Object.fromEntries(response.headers.entries()));
+  console.log('🔍 API Response Body:', responseText);
+
+  if (!response.ok) {
+    throw new Error(`API Test failed: ${response.status} - ${responseText}`);
+  }
+
+  return JSON.parse(responseText);
+}
+
 async function uploadDocumentToFireberry(
   recordId: string,
   signatureUrl: string,
@@ -83,6 +119,20 @@ serve(async (req) => {
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
 
     const { recordId, signatureUrl, contractUrl } = body;
+
+    // Check if this is a test request
+    if (recordId === 'TEST') {
+      console.log('🧪 Running Fireberry API test...');
+      const testResult = await testFireberryAPI();
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Test completed successfully',
+        testResult
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
 
     if (!recordId || !signatureUrl || !contractUrl) {
       throw new Error('Missing required fields: recordId, signatureUrl, contractUrl');
