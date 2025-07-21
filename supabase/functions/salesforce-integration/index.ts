@@ -153,6 +153,7 @@ serve(async (req) => {
       recordId,
       signatureUrl,
       contractUrl,
+      docid: uploadResult.docid
     };
 
     console.log('🎉 Fireberry document upload completed successfully:', response);
