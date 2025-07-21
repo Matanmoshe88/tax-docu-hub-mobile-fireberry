@@ -55,9 +55,10 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
     throw new Error(`Failed to fetch opportunity data: ${response.status} - ${errorText}`);
   }
 
-  const opportunityData = await response.json() as FireberryOpportunity;
+  const opportunityData = await response.json() as any;
   console.log('✅ Opportunity data fetched successfully');
   console.log('🔍 Raw Fireberry response:', JSON.stringify(opportunityData, null, 2));
+  console.log('🔍 Available fields:', Object.keys(opportunityData));
 
   // Map Fireberry fields to our LeadData interface
   const leadData: LeadData = {
