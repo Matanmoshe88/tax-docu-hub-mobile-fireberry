@@ -13,11 +13,11 @@ import {
   Download,
   Home
 } from 'lucide-react';
-import { useSalesforceData } from '@/hooks/useSalesforceData';
+import { useFireberryData } from '@/hooks/useFireberryData';
 
 export const FinishPage: React.FC = () => {
   const navigate = useNavigate();
-  const { recordId } = useSalesforceData();
+  const { recordId } = useFireberryData();
 
   const nextSteps = [
     {

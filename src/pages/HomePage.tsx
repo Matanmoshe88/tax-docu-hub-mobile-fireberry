@@ -4,12 +4,12 @@ import { PortalLayout } from '@/components/PortalLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, LogIn, LogOut, User } from 'lucide-react';
-import { useSalesforceData } from '@/hooks/useSalesforceData';
+import { useFireberryData } from '@/hooks/useFireberryData';
 import { useAuth } from '@/hooks/useAuth';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { clientData, isLoading, recordId } = useSalesforceData();
+  const { clientData, isLoading, recordId } = useFireberryData();
   const { user, signOut } = useAuth();
 
   const handleNext = () => {

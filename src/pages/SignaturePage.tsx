@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { PenTool, RotateCcw, Check, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useSalesforceData } from '@/hooks/useSalesforceData';
+import { useFireberryData } from '@/hooks/useFireberryData';
 import { generateContractPDFBlob } from '@/lib/pdfGenerator';
 
 export const SignaturePage: React.FC = () => {
   const navigate = useNavigate();
-  const { clientData, recordId } = useSalesforceData();
+  const { clientData, recordId } = useFireberryData();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
@@ -147,15 +147,14 @@ export const SignaturePage: React.FC = () => {
     return publicUrl;
   };
 
-  const callSalesforceIntegration = async (signatureUrl: string, documentType?: string, documentName?: string) => {
-    console.log('🔄 Calling Salesforce integration...');
+  const callFireberryIntegration = async (signatureUrl: string, contractUrl: string) => {
+    console.log('🔄 Calling Fireberry integration...');
     
     const { data, error } = await supabase.functions.invoke('salesforce-integration', {
       body: {
-        leadId: recordId,
+        recordId: recordId,
         signatureUrl,
-        documentType,
-        documentName
+        contractUrl
       }
     });
 
@@ -284,18 +283,14 @@ export const SignaturePage: React.FC = () => {
         .from('signatures')
         .getPublicUrl(contractFileName);
 
-      // Send signature to Salesforce
+      // Send signature and contract to Fireberry
       toast({
-        title: "שולח ל-Salesforce...",
-        description: "מעביר את החתימה למערכת הניהול",
+        title: "שולח לכותב...",
+        description: "מעביר את החתימה וההסכם למערכת הניהול",
       });
       
-      const salesforceResult = await callSalesforceIntegration(signatureUrl, "חתימה", "חתימה");
-      console.log('✅ Signature uploaded to Salesforce:', salesforceResult);
-
-      // Send contract to Salesforce
-      const contractResult = await callSalesforceIntegration(contractUrl, "הסכם התקשרות", "הסכם התקשרות");
-      console.log('✅ Contract uploaded to Salesforce:', contractResult);
+      const fireberryResult = await callFireberryIntegration(signatureUrl, contractUrl);
+      console.log('✅ Documents uploaded to Fireberry:', fireberryResult);
       
       setIsSigned(true);
       toast({

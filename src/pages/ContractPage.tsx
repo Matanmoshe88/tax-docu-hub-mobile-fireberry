@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FileText, User, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useSalesforceData } from '@/hooks/useSalesforceData';
+import { useFireberryData } from '@/hooks/useFireberryData';
 import { generateContractText } from '@/lib/contractUtils';
 
 export const ContractPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { clientData, isLoading, recordId } = useSalesforceData();
+  const { clientData, isLoading, recordId } = useFireberryData();
 
   // Disable browser back button
   useEffect(() => {

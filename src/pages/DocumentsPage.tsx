@@ -17,7 +17,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { createAndDownloadPDF } from '@/lib/pdfGenerator';
 import { supabase } from '@/integrations/supabase/client';
-import { useSalesforceData } from '@/hooks/useSalesforceData';
+import { useFireberryData } from '@/hooks/useFireberryData';
 
 interface Document {
   id: string;
@@ -43,7 +43,7 @@ interface DocumentsSingle {
 
 export const DocumentsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { clientData, isLoading, recordId, isDataFresh } = useSalesforceData();
+  const { clientData, isLoading, recordId, isDataFresh } = useFireberryData();
   const { toast } = useToast();
   
   const [documents, setDocuments] = useState<Document[]>([
@@ -185,15 +185,14 @@ export const DocumentsPage: React.FC = () => {
     return publicUrl;
   };
 
-  const sendDocumentToSalesforce = async (documentUrl: string, documentType: string, documentName: string) => {
-    console.log('🔄 Sending document to Salesforce...');
+  const sendDocumentToFireberry = async (documentUrl: string, contractUrl: string) => {
+    console.log('🔄 Sending document to Fireberry...');
     
     const { data, error } = await supabase.functions.invoke('salesforce-integration', {
       body: {
-        leadId: recordId,
+        recordId: recordId,
         signatureUrl: documentUrl,
-        documentType,
-        documentName
+        contractUrl: contractUrl
       }
     });
 
@@ -225,7 +224,9 @@ export const DocumentsPage: React.FC = () => {
         description: "מעביר את הקובץ למערכת הניהול",
       });
 
-      await sendDocumentToSalesforce(documentUrl, document.salesforceType, document.salesforceName);
+      // Note: Individual document uploads are handled differently from signature+contract uploads
+      // For now, just store the document URL without calling Fireberry API
+      console.log('Document uploaded to storage, skipping Fireberry integration for individual documents');
 
       // Update local state
       setDocuments(prev => prev.map(doc => 
