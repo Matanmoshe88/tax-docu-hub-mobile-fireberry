@@ -104,7 +104,7 @@ export const DocumentsPage: React.FC = () => {
   const getDocumentType = (docId: string): string => {
     const mapping: Record<string, string> = {
       'id-card': 'id_photo',
-      'drivers-license': 'id_photo', // Both use same field
+      'driver-license': 'drivers_license', // Driver's license
       'id-supplement': 'appendix',
       'bank-statement': 'bank_statement'
     };
