@@ -63,16 +63,23 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
   // Map Fireberry fields to our LeadData interface
   const leadData: LeadData = {
     Id: opportunityId,
-    Name: `${opportunityData.pcfsystemfield509 || ''} ${opportunityData.pcfsystemfield511 || ''}`.trim(),
-    id__c: opportunityData.pcfsystemfield515 || '',
-    MobilePhone: '', // Not available in Fireberry response
-    Commission__c: opportunityData.pcfsystemfield703 || 22,
-    fulladress__c: `${opportunityData.pcfsystemfield530 || ''} ${opportunityData.pcfsystemfield532 || ''}, ${opportunityData.pcfsystemfield527 || ''}`.trim(),
+    Name: `${opportunityData.pcfsystemfield509 || opportunityData.Name || ''} ${opportunityData.pcfsystemfield511 || opportunityData.LastName || ''}`.trim(),
+    id__c: opportunityData.pcfsystemfield515 || opportunityData.IdNumber || opportunityData.ID || '',
+    MobilePhone: opportunityData.MobilePhone || opportunityData.Phone || '',
+    Commission__c: opportunityData.pcfsystemfield703 || opportunityData.Commission || 22,
+    fulladress__c: `${opportunityData.pcfsystemfield530 || opportunityData.Street || ''} ${opportunityData.pcfsystemfield532 || opportunityData.HouseNumber || ''}, ${opportunityData.pcfsystemfield527 || opportunityData.City || ''}`.trim(),
   };
 
   console.log('🔍 Mapped leadData:', JSON.stringify(leadData, null, 2));
 
-  return leadData;
+  // Return response that includes raw data for debugging
+  return {
+    ...leadData,
+    _debug: {
+      rawResponse: opportunityData,
+      availableFields: Object.keys(opportunityData)
+    }
+  } as any;
 }
 
 

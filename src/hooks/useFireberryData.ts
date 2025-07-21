@@ -120,6 +120,8 @@ export const useFireberryData = () => {
       const { leadData } = data.data;
       console.log('✅ Fireberry data loaded successfully');
       console.log('📊 API Response data:', { leadData });
+      console.log('🔍 DEBUG - Raw Fireberry response:', leadData._debug?.rawResponse);
+      console.log('🔍 DEBUG - Available fields:', leadData._debug?.availableFields);
       console.log('🔍 LeadData fields:', Object.keys(leadData || {}));
 
       // Update client data with Fireberry data using the mapped fields
