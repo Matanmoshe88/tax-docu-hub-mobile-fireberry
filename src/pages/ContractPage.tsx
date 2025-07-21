@@ -120,7 +120,6 @@ export const ContractPage: React.FC = () => {
 
 שם מלא: ${clientData.firstName} ${clientData.lastName}     מספר תעודת זהות: ${clientData.idNumber}
 
-כתובת: ${clientData.address}
 
         
 
