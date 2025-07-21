@@ -17,21 +17,29 @@ async function uploadDocumentToFireberry(
   signatureUrl: string,
   contractUrl: string
 ): Promise<any> {
-  console.log(`🔄 Updating Fireberry record with signature and contract URLs: ${recordId}`);
+  console.log(`🔄 Creating new document record in Fireberry for record: ${recordId}`);
   
   const tokenId = Deno.env.get('FIREBERRY_TOKEN_ID');
   if (!tokenId) {
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
 
-  // Create form data to update the existing opportunity record
+  // Create form data for new record
   const formData = new FormData();
-  formData.append('pcfsystemfield976', signatureUrl); // Signature URL field
-  formData.append('pcfsystemfield725', contractUrl);  // Contract URL field
+  formData.append('pcfsystemfield693', recordId);
+  formData.append('name', 'מס הכנסה');
+  formData.append('pcfsystemfield976', signatureUrl);
+  formData.append('pcfsystemfield725', contractUrl);
 
-  // Update the existing opportunity record (table 1003 for opportunities)
-  const response = await fetch(`https://api.powerlink.co.il/api/record/1003/${recordId}`, {
-    method: 'PUT',
+  console.log('📝 Form data being sent:', {
+    pcfsystemfield693: recordId,
+    name: 'מס הכנסה',
+    pcfsystemfield976: signatureUrl,
+    pcfsystemfield725: contractUrl
+  });
+
+  const response = await fetch('https://api.powerlink.co.il/api/record/1004', {
+    method: 'POST',
     headers: {
       'TokenID': tokenId,
     },
@@ -40,12 +48,12 @@ async function uploadDocumentToFireberry(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ Fireberry record update failed:', response.status, errorText);
-    throw new Error(`Failed to update record: ${response.status} - ${errorText}`);
+    console.error('❌ Fireberry document creation failed:', response.status, errorText);
+    throw new Error(`Failed to create document: ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
-  console.log('✅ Record updated successfully in Fireberry:', result);
+  console.log('✅ Document created successfully in Fireberry:', result);
   return result;
 }
 
