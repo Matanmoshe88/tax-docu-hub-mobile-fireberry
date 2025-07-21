@@ -24,16 +24,22 @@ async function uploadDocumentToFireberry(
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
 
-  // Create form data for new record
+  // Create form data for new record - try with minimal required fields first
   const formData = new FormData();
-  formData.append('pcfsystemfield693', recordId);
-  formData.append('name', 'מס הכנסה');
-  formData.append('pcfsystemfield976', signatureUrl);
-  formData.append('pcfsystemfield725', contractUrl);
+  formData.append('opportunityid', recordId); // Link to the opportunity
+  formData.append('name', 'חוזה חתום - מס הכנסה');
+  
+  // Try using different field names for the URLs
+  if (signatureUrl) {
+    formData.append('pcfsystemfield976', signatureUrl);
+  }
+  if (contractUrl) {
+    formData.append('pcfsystemfield725', contractUrl);
+  }
 
   console.log('📝 Form data being sent:', {
-    pcfsystemfield693: recordId,
-    name: 'מס הכנסה',
+    opportunityid: recordId,
+    name: 'חוזה חתום - מס הכנסה',
     pcfsystemfield976: signatureUrl,
     pcfsystemfield725: contractUrl
   });
