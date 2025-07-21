@@ -60,26 +60,23 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
   console.log('🔍 Raw Fireberry response:', JSON.stringify(opportunityData, null, 2));
   console.log('🔍 Available fields:', Object.keys(opportunityData));
 
-  // Map Fireberry fields to our LeadData interface
+  // Extract the actual record data from the nested response
+  const record = opportunityData.data?.Record || {};
+  console.log('🔍 Extracted record:', JSON.stringify(record, null, 2));
+
+  // Map Fireberry fields to our LeadData interface using correct field names
   const leadData: LeadData = {
     Id: opportunityId,
-    Name: `${opportunityData.pcfsystemfield509 || opportunityData.Name || ''} ${opportunityData.pcfsystemfield511 || opportunityData.LastName || ''}`.trim(),
-    id__c: opportunityData.pcfsystemfield515 || opportunityData.IdNumber || opportunityData.ID || '',
-    MobilePhone: opportunityData.MobilePhone || opportunityData.Phone || '',
-    Commission__c: opportunityData.pcfsystemfield703 || opportunityData.Commission || 22,
-    fulladress__c: `${opportunityData.pcfsystemfield530 || opportunityData.Street || ''} ${opportunityData.pcfsystemfield532 || opportunityData.HouseNumber || ''}, ${opportunityData.pcfsystemfield527 || opportunityData.City || ''}`.trim(),
+    Name: `${record.pcfsystemfield509 || ''} ${record.pcfsystemfield511 || ''}`.trim(),
+    id__c: record.pcfsystemfield515 || '',
+    MobilePhone: '', // Not available in this response
+    Commission__c: record.pcfsystemfield703 || 22,
+    fulladress__c: `${record.pcfsystemfield530 || ''} ${record.pcfsystemfield532 || ''}, ${record.pcfsystemfield527 || ''}`.trim(),
   };
 
-  console.log('🔍 Mapped leadData:', JSON.stringify(leadData, null, 2));
+  console.log('🔍 Final mapped leadData:', JSON.stringify(leadData, null, 2));
 
-  // Return response that includes raw data for debugging
-  return {
-    ...leadData,
-    _debug: {
-      rawResponse: opportunityData,
-      availableFields: Object.keys(opportunityData)
-    }
-  } as any;
+  return leadData;
 }
 
 
