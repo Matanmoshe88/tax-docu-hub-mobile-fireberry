@@ -41,7 +41,7 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
   }
 
   const response = await fetch(
-    `https://api.fireberry.com/api/record/Opportunity/${opportunityId}`,
+    `https://api.powerlink.co.il/api/record/1001/${opportunityId}`,
     {
       headers: {
         'TokenID': tokenId,
