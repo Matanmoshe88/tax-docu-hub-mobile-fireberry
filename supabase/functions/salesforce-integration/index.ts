@@ -82,25 +82,6 @@ serve(async (req) => {
     const body = await req.json() as DocumentUploadRequest;
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
 
-    // Add test endpoint for debugging
-    if (body.recordId === 'TEST') {
-      console.log('🧪 Running test with dummy data...');
-      const testResult = await uploadDocumentToFireberry(
-        '93512387-b219-4cb1-bb2a-a14aeecbd8e6', // Use current record ID
-        'https://example.com/test-signature.png',
-        'https://example.com/test-contract.pdf'
-      );
-      
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Test completed successfully',
-        result: testResult
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      });
-    }
-
     const { recordId, signatureUrl, contractUrl } = body;
 
     if (!recordId || !signatureUrl || !contractUrl) {
