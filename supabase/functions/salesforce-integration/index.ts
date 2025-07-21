@@ -17,22 +17,21 @@ async function uploadDocumentToFireberry(
   signatureUrl: string,
   contractUrl: string
 ): Promise<any> {
-  console.log(`🔄 Uploading document to Fireberry for record: ${recordId}`);
+  console.log(`🔄 Updating Fireberry record with signature and contract URLs: ${recordId}`);
   
   const tokenId = Deno.env.get('FIREBERRY_TOKEN_ID');
   if (!tokenId) {
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
 
-  // Create form data
+  // Create form data to update the existing opportunity record
   const formData = new FormData();
-  formData.append('pcfsystemfield693', recordId);
-  formData.append('name', 'מס הכנסה');
-  formData.append('pcfsystemfield976', signatureUrl);
-  formData.append('pcfsystemfield725', contractUrl);
+  formData.append('pcfsystemfield976', signatureUrl); // Signature URL field
+  formData.append('pcfsystemfield725', contractUrl);  // Contract URL field
 
-  const response = await fetch('https://api.powerlink.co.il/api/record/1004', {
-    method: 'POST',
+  // Update the existing opportunity record (table 1003 for opportunities)
+  const response = await fetch(`https://api.powerlink.co.il/api/record/1003/${recordId}`, {
+    method: 'PUT',
     headers: {
       'TokenID': tokenId,
     },
@@ -41,12 +40,12 @@ async function uploadDocumentToFireberry(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ Fireberry document upload failed:', response.status, errorText);
-    throw new Error(`Failed to upload document: ${response.status} - ${errorText}`);
+    console.error('❌ Fireberry record update failed:', response.status, errorText);
+    throw new Error(`Failed to update record: ${response.status} - ${errorText}`);
   }
 
   const result = await response.json();
-  console.log('✅ Document uploaded successfully to Fireberry:', result);
+  console.log('✅ Record updated successfully in Fireberry:', result);
   return result;
 }
 
