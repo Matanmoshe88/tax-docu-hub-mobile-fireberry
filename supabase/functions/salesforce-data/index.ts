@@ -102,51 +102,69 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
 
-  const requestBody = {
-    "objecttype": "1004",
-    "sort_type": "desc",
-    "query": `(pcfsystemfield693 = '${recordId}' AND pcfsystemfield979 = '${contractSessionTimestamp}')`,
-    "fields": "customobject1004id"
-  };
+  // Try multiple query approaches since the API might be sensitive to format
+  const queries = [
+    `(pcfsystemfield693 = '${recordId}' AND pcfsystemfield979 = '${contractSessionTimestamp}')`,
+    `pcfsystemfield693 = '${recordId}' AND pcfsystemfield979 = '${contractSessionTimestamp}'`,
+    `pcfsystemfield693='${recordId}' AND pcfsystemfield979='${contractSessionTimestamp}'`
+  ];
 
-  console.log('📤 Query API Request Body:', JSON.stringify(requestBody, null, 2));
-  console.log('🌐 Query API URL: https://api.powerlink.co.il/api/query');
-  console.log('🔑 Using TokenID for query request');
+  for (let i = 0; i < queries.length; i++) {
+    try {
+      const requestBody = {
+        "objecttype": "1004",
+        "sort_type": "desc",
+        "query": queries[i],
+        "fields": "customobject1004id"
+      };
 
-  const response = await fetch('https://api.powerlink.co.il/api/query', {
-    method: 'POST',
-    headers: {
-      'TokenID': tokenId,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  });
+      console.log(`📤 Query attempt ${i + 1} - Request Body:`, JSON.stringify(requestBody, null, 2));
 
-  console.log(`📥 Query API Response Status: ${response.status}`);
+      const response = await fetch('https://api.powerlink.co.il/api/query', {
+        method: 'POST',
+        headers: {
+          'TokenID': tokenId,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`❌ Query API Error Response: ${errorText}`);
-    throw new Error(`Failed to query existing document: ${response.status} - ${errorText}`);
+      console.log(`📥 Query attempt ${i + 1} - Response Status: ${response.status}`);
+
+      if (response.ok) {
+        const queryResult = await response.json() as any;
+        console.log('📥 Query API Response Body:', JSON.stringify(queryResult, null, 2));
+
+        // Check if any documents were found
+        if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
+          const documentId = queryResult.data.Data[0].customobject1004id;
+          console.log(`✅ Found existing document with ID: ${documentId}`);
+          console.log(`📊 Total documents found: ${queryResult.data.Data.length}`);
+          return documentId;
+        }
+
+        console.log('❌ No existing document found with this query');
+        return null; // Return null on successful query but no results
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ Query attempt ${i + 1} failed: ${response.status} - ${errorText}`);
+        
+        if (i === queries.length - 1) {
+          // If this is the last attempt, log the error but don't throw
+          console.error('🚨 All query attempts failed, assuming no existing document');
+          return null;
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Query attempt ${i + 1} error:`, error);
+      if (i === queries.length - 1) {
+        // If this is the last attempt, log the error but don't throw
+        console.error('🚨 All query attempts failed due to errors, assuming no existing document');
+        return null;
+      }
+    }
   }
 
-  const queryResult = await response.json() as any;
-  console.log('📥 Query API Response Body:', JSON.stringify(queryResult, null, 2));
-
-  // Check if any documents were found
-  if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
-    const documentId = queryResult.data.Data[0].customobject1004id;
-    console.log(`✅ Found existing document with ID: ${documentId}`);
-    console.log(`📊 Total documents found: ${queryResult.data.Data.length}`);
-    return documentId;
-  }
-
-  console.log('❌ No existing document found');
-  console.log('🔍 Query result structure:', {
-    hasData: !!queryResult.data,
-    hasDataArray: !!queryResult.data?.Data,
-    dataLength: queryResult.data?.Data?.length || 0
-  });
   return null;
 }
 
