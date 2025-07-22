@@ -120,9 +120,9 @@ export const useFireberryData = () => {
         return;
       }
 
-      const { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo, documentId: apiDocumentId } = data.data;
+      const { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo, documentId: apiDocumentId, documentStatus } = data.data;
       console.log('✅ Fireberry data loaded successfully');
-      console.log('📊 API Response data:', { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo, documentId: apiDocumentId });
+      console.log('📊 API Response data:', { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo, documentId: apiDocumentId, documentStatus });
       console.log('🔍 DEBUG - Raw Fireberry response:', leadData._debug?.rawResponse);
       console.log('🔍 DEBUG - Available fields:', leadData._debug?.availableFields);
       console.log('🔍 LeadData fields:', Object.keys(leadData || {}));
@@ -132,6 +132,12 @@ export const useFireberryData = () => {
         console.log('📝 Storing document ID from API:', apiDocumentId);
         setDocumentId(apiDocumentId);
         sessionStorage.setItem('docid', apiDocumentId);
+      }
+
+      // Store document status
+      if (documentStatus) {
+        console.log('📝 Storing document status from API:', documentStatus);
+        sessionStorage.setItem('documentsStatus', JSON.stringify(documentStatus));
       }
 
       // Handle redirect logic

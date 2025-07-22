@@ -114,7 +114,6 @@ export const DocumentsPage: React.FC = () => {
   // Load document status from session storage when data changes
   useEffect(() => {
     console.log('📋 DocumentsPage recordId from useSalesforceData:', recordId);
-    console.log('📋 Current URL recordId should be: 00QWn000002zxExMAI');
     console.log('📋 DocId for Fireberry updates:', getDocId());
     
     const documentsStatus = sessionStorage.getItem('documentsStatus');
@@ -122,40 +121,32 @@ export const DocumentsPage: React.FC = () => {
     
     if (documentsStatus) {
       try {
-        const salesforceDocuments: DocumentsSingle[] = JSON.parse(documentsStatus);
-        console.log('📄 Loading document status from Salesforce:', salesforceDocuments);
-        console.log('📝 Local document types:', documents.map(d => ({ id: d.id, salesforceType: d.salesforceType })));
+        const documentStatus = JSON.parse(documentsStatus);
+        console.log('📄 Loading document status from Fireberry:', documentStatus);
         
-        // Update document status based on Salesforce data
+        // Map Fireberry document status to local document IDs
+        const statusMapping = {
+          'id-card': 'id-card',
+          'drivers-license': 'driver-license',
+          'id-appendix': 'id-supplement',
+          'account-management': 'bank-statement'
+        };
+        
+        // Update document status based on Fireberry data
         setDocuments(prev => prev.map(doc => {
-          console.log(`🔍 Checking document ${doc.id} (${doc.salesforceType})`);
+          const fireberryKey = Object.keys(statusMapping).find(key => 
+            statusMapping[key as keyof typeof statusMapping] === doc.id
+          ) as keyof typeof documentStatus;
           
-          // Find the latest document of this type from Salesforce
-          const salesforceDocs = salesforceDocuments
-            .filter(sf => {
-              console.log(`  Comparing SF doc type "${sf.DocumentType__c}" with local type "${doc.salesforceType}"`);
-              return sf.DocumentType__c === doc.salesforceType;
-            })
-            .sort((a, b) => new Date(b.CreatedDate).getTime() - new Date(a.CreatedDate).getTime());
-          
-          console.log(`  Found ${salesforceDocs.length} matching documents for ${doc.id}`);
-          
-          const latestDoc = salesforceDocs[0];
-          
-          if (latestDoc) {
-            console.log(`  Latest doc for ${doc.id}:`, latestDoc);
-            // Consider document uploaded if status is completed OR if it has a doc_url (indicating it was uploaded)
-            if (latestDoc.Status__c === 'הושלם' || (latestDoc.doc_url__c && latestDoc.doc_url__c !== null)) {
-              console.log(`  ✅ Marking ${doc.id} as uploaded and locked (Status: ${latestDoc.Status__c}, URL: ${latestDoc.doc_url__c})`);
-              return {
-                ...doc,
-                uploaded: true,
-                locked: true
-              };
-            }
+          if (fireberryKey && documentStatus[fireberryKey]) {
+            console.log(`✅ Marking ${doc.id} as uploaded (from Fireberry status)`);
+            return {
+              ...doc,
+              uploaded: true,
+              locked: true
+            };
           }
           
-          console.log(`  ❌ No completed document found for ${doc.id}`);
           return doc;
         }));
       } catch (error) {

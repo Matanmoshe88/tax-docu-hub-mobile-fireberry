@@ -27,6 +27,13 @@ interface LeadData {
   ContractSessionTimestamp: string;
 }
 
+interface DocumentStatus {
+  'id-card': boolean;
+  'drivers-license': boolean;
+  'id-appendix': boolean;
+  'account-management': boolean;
+}
+
 interface FireberryDataResponse {
   success: boolean;
   data?: {
@@ -34,6 +41,7 @@ interface FireberryDataResponse {
     shouldRedirect: boolean;
     redirectTo: string;
     documentId?: string | null;
+    documentStatus?: DocumentStatus;
   };
   error?: string;
 }
@@ -171,7 +179,7 @@ async function createNewDocument(recordId: string, contractSessionTimestamp: str
   console.log('✅ Document created successfully:', JSON.stringify(result, null, 2));
 }
 
-async function fetchDocumentDetails(documentId: string): Promise<string | null> {
+async function fetchDocumentDetails(documentId: string): Promise<{contractField: string | null, documentStatus: DocumentStatus}> {
   console.log(`📋 Fetching document details for ID: ${documentId}`);
   
   const tokenId = Deno.env.get('FIREBERRY_TOKEN_ID');
@@ -195,12 +203,22 @@ async function fetchDocumentDetails(documentId: string): Promise<string | null> 
   const documentData = await response.json() as any;
   console.log('🔍 Document details:', JSON.stringify(documentData, null, 2));
 
-  // Extract the contract field (pcfsystemfield725)
+  // Extract the record data
   const record = documentData.data?.Record || {};
   const contractField = record.pcfsystemfield725 || '';
   
+  // Extract document status from the record
+  const documentStatus: DocumentStatus = {
+    'id-card': !!(record.pcfsystemfield719),
+    'drivers-license': !!(record.pcfsystemfield978),
+    'id-appendix': !!(record.pcfsystemfield977),
+    'account-management': !!(record.pcfsystemfield967),
+  };
+
   console.log(`🔍 Contract field value: ${contractField}`);
-  return contractField;
+  console.log(`🔍 Document status:`, documentStatus);
+  
+  return { contractField, documentStatus };
 }
 
 serve(async (req) => {
@@ -250,6 +268,12 @@ serve(async (req) => {
     let shouldRedirect = false;
     let redirectTo = '';
     let documentId = existingDocumentId;
+    let documentStatus: DocumentStatus = {
+      'id-card': false,
+      'drivers-license': false,
+      'id-appendix': false,
+      'account-management': false,
+    };
 
     if (!existingDocumentId) {
       // No existing document found, create a new one
@@ -263,7 +287,9 @@ serve(async (req) => {
     } else {
       // Document exists, fetch its details to check if contract is already signed
       console.log('📋 Existing document found, checking contract status');
-      const contractField = await fetchDocumentDetails(existingDocumentId);
+      const documentDetails = await fetchDocumentDetails(existingDocumentId);
+      const contractField = documentDetails.contractField;
+      documentStatus = documentDetails.documentStatus;
       
       if (contractField && contractField.trim() !== '') {
         // Contract is already signed, redirect to documents screen
@@ -282,7 +308,8 @@ serve(async (req) => {
         leadData,
         shouldRedirect,
         redirectTo,
-        documentId: documentId // Add the document ID to the response
+        documentId: documentId, // Add the document ID to the response
+        documentStatus: documentStatus // Add the document status to the response
       }
     };
 
