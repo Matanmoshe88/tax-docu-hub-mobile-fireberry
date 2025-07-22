@@ -115,8 +115,8 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
   console.log('🔍 Document query result:', JSON.stringify(queryResult, null, 2));
 
   // Check if any documents were found
-  if (queryResult.data && queryResult.data.length > 0) {
-    const documentId = queryResult.data[0].customobject1004id;
+  if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
+    const documentId = queryResult.data.Data[0].customobject1004id;
     console.log(`✅ Found existing document with ID: ${documentId}`);
     return documentId;
   }
