@@ -11,7 +11,7 @@ import { generateContractText } from '@/lib/contractUtils';
 export const ContractPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { clientData, isLoading, recordId } = useFireberryData();
+  const { clientData, isLoading, recordId, shouldRedirect, redirectTo } = useFireberryData();
 
   // Disable browser back button
   useEffect(() => {
@@ -32,6 +32,18 @@ export const ContractPage: React.FC = () => {
       window.removeEventListener('popstate', handlePopState);
     };
   }, [toast]);
+
+  // Handle redirect if contract is already signed
+  useEffect(() => {
+    if (!isLoading && shouldRedirect && redirectTo) {
+      console.log('📍 Contract already signed, redirecting to:', redirectTo);
+      toast({
+        title: "החוזה כבר נחתם",
+        description: "מעביר אותך לדף המסמכים",
+      });
+      navigate(redirectTo);
+    }
+  }, [isLoading, shouldRedirect, redirectTo, navigate, toast]);
 
   const handleNext = () => {
     navigate(`/signature/${recordId}`);

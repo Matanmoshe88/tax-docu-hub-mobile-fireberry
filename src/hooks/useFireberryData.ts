@@ -31,6 +31,8 @@ export const useFireberryData = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isDataFresh, setIsDataFresh] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [redirectTo, setRedirectTo] = useState('');
 
   const isSessionExpired = (timestamp: number): boolean => {
     const thirtyMinutesInMs = 30 * 60 * 1000;
@@ -117,12 +119,22 @@ export const useFireberryData = () => {
         return;
       }
 
-      const { leadData } = data.data;
+      const { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo } = data.data;
       console.log('✅ Fireberry data loaded successfully');
-      console.log('📊 API Response data:', { leadData });
+      console.log('📊 API Response data:', { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo });
       console.log('🔍 DEBUG - Raw Fireberry response:', leadData._debug?.rawResponse);
       console.log('🔍 DEBUG - Available fields:', leadData._debug?.availableFields);
       console.log('🔍 LeadData fields:', Object.keys(leadData || {}));
+
+      // Handle redirect logic
+      if (apiShouldRedirect && apiRedirectTo) {
+        console.log('📍 API indicates redirect needed:', apiRedirectTo);
+        setShouldRedirect(true);
+        setRedirectTo(apiRedirectTo);
+      } else {
+        setShouldRedirect(false);
+        setRedirectTo('');
+      }
 
       // Update client data with Fireberry data using the mapped fields
       console.log('🔍 Raw Fireberry leadData:', JSON.stringify(leadData, null, 2));
@@ -186,6 +198,8 @@ export const useFireberryData = () => {
     isLoading,
     isDataFresh,
     recordId,
+    shouldRedirect,
+    redirectTo,
     refetchData: fetchFireberryData
   };
 };
