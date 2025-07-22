@@ -105,7 +105,7 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
   const requestBody = {
     "objecttype": "1004",
     "sort_type": "desc",
-    "query": `(pcfsystemfield693 = ${recordId} AND pcfsystemfield979 = ${contractSessionTimestamp})`,
+    "query": `(pcfsystemfield693 = '${recordId}' AND pcfsystemfield979 = '${contractSessionTimestamp}')`,
     "fields": "customobject1004id"
   };
 
