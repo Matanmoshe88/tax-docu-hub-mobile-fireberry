@@ -105,8 +105,8 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
   const requestBody = {
     "objecttype": "1004",
     "sort_type": "desc",
-    "query": `(pcfsystemfield693 = ${recordId} AND pcfsystemfield979 = ${contractSessionTimestamp})`,
-    "fields": "customobject1004id,pcfsystemfield979"  // Also return the timestamp to see what we actually get
+    "query": `(pcfsystemfield693 = ${recordId})`,  // Step 1: Find all docs for this opp ID
+    "fields": "customobject1004id,pcfsystemfield979"
   };
 
   console.log('📤 Query API Request Body:', JSON.stringify(requestBody, null, 2));
@@ -139,14 +139,29 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
     });
   }
 
-  // Check if any documents were found
+  // Step 2: Check if any documents match the contract session timestamp
   if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
-    const documentId = queryResult.data.Data[0].customobject1004id;
-    console.log(`✅ Found existing document with ID: ${documentId}`);
-    return documentId;
+    console.log(`🔍 Step 2: Looking for timestamp match: ${contractSessionTimestamp}`);
+    
+    // Find document with matching timestamp
+    const matchingDoc = queryResult.data.Data.find((doc: any) => 
+      doc.pcfsystemfield979 === contractSessionTimestamp
+    );
+    
+    if (matchingDoc) {
+      console.log(`✅ Found document with matching timestamp: ID=${matchingDoc.customobject1004id}, Timestamp=${matchingDoc.pcfsystemfield979}`);
+      return matchingDoc.customobject1004id;
+    } else {
+      console.log(`❌ No document found with matching timestamp ${contractSessionTimestamp}`);
+      console.log('📋 Available timestamps in documents:');
+      queryResult.data.Data.forEach((doc: any, index: number) => {
+        console.log(`   Document ${index + 1}: ${doc.pcfsystemfield979}`);
+      });
+      return null;
+    }
   }
 
-  console.log('❌ No existing document found');
+  console.log('❌ No documents found for this opportunity ID');
   return null;
 }
 
