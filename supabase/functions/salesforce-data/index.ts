@@ -200,7 +200,7 @@ async function fetchDocumentDetails(documentId: string): Promise<string | null> 
 }
 
 serve(async (req) => {
-  console.log('🚀 Fireberry data function called');
+  console.log('🚀 Fireberry data function called - v2 with detailed logging');
   console.log(`📝 Request method: ${req.method}`);
 
   // Handle CORS preflight requests
