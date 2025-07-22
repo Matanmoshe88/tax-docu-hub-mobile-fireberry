@@ -102,85 +102,43 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
 
-  // Try different query formats to find what works with the API
-  const queryAttempts = [
-    // Attempt 1: Without parentheses and with exact string matching
-    {
-      "objecttype": "1004",
-      "sort_type": "desc", 
-      "query": `pcfsystemfield693='${recordId}' AND pcfsystemfield979='${contractSessionTimestamp}'`,
-      "fields": "customobject1004id"
+  const requestBody = {
+    "objecttype": "1004",
+    "sort_type": "desc",
+    "query": `(pcfsystemfield693 = ${recordId} AND pcfsystemfield979 = ${contractSessionTimestamp})`,
+    "fields": "customobject1004id"
+  };
+
+  console.log('📤 Query API Request Body:', JSON.stringify(requestBody, null, 2));
+
+  const response = await fetch('https://api.powerlink.co.il/api/query', {
+    method: 'POST',
+    headers: {
+      'TokenID': tokenId,
+      'Content-Type': 'application/json',
     },
-    // Attempt 2: Try with LIKE operator
-    {
-      "objecttype": "1004",
-      "sort_type": "desc",
-      "query": `pcfsystemfield693 LIKE '${recordId}' AND pcfsystemfield979 LIKE '${contractSessionTimestamp}'`,
-      "fields": "customobject1004id"
-    },
-    // Attempt 3: Query only by recordId first
-    {
-      "objecttype": "1004", 
-      "sort_type": "desc",
-      "query": `pcfsystemfield693='${recordId}'`,
-      "fields": "customobject1004id,pcfsystemfield979"
-    }
-  ];
+    body: JSON.stringify(requestBody),
+  });
 
-  for (let i = 0; i < queryAttempts.length; i++) {
-    try {
-      console.log(`📤 Query attempt ${i + 1}:`, JSON.stringify(queryAttempts[i], null, 2));
+  console.log(`📥 Query API Response Status: ${response.status}`);
 
-      const response = await fetch('https://api.powerlink.co.il/api/query', {
-        method: 'POST',
-        headers: {
-          'TokenID': tokenId,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(queryAttempts[i]),
-      });
-
-      console.log(`📥 Query attempt ${i + 1} - Response Status: ${response.status}`);
-
-      if (response.ok) {
-        const queryResult = await response.json() as any;
-        console.log(`📥 Query attempt ${i + 1} - Response:`, JSON.stringify(queryResult, null, 2));
-
-        if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
-          // If this was the recordId-only query, check timestamps manually
-          if (i === 2) {
-            const matchingDoc = queryResult.data.Data.find((doc: any) => 
-              doc.pcfsystemfield979 === contractSessionTimestamp
-            );
-            if (matchingDoc) {
-              console.log(`✅ Found matching document: ${matchingDoc.customobject1004id}`);
-              return matchingDoc.customobject1004id;
-            } else {
-              console.log(`❌ No matching timestamp found in ${queryResult.data.Data.length} documents`);
-              return null;
-            }
-          } else {
-            // Direct match
-            const documentId = queryResult.data.Data[0].customobject1004id;
-            console.log(`✅ Found existing document: ${documentId}`);
-            return documentId;
-          }
-        } else {
-          console.log(`❌ No documents found with attempt ${i + 1}`);
-          if (i === queryAttempts.length - 1) {
-            return null;
-          }
-        }
-      } else {
-        const errorText = await response.text();
-        console.error(`❌ Query attempt ${i + 1} failed: ${response.status} - ${errorText}`);
-      }
-    } catch (error) {
-      console.error(`❌ Query attempt ${i + 1} error:`, error);
-    }
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`❌ Query API Error Response: ${errorText}`);
+    throw new Error(`Failed to query existing document: ${response.status} - ${errorText}`);
   }
 
-  console.log('❌ All query attempts failed');
+  const queryResult = await response.json() as any;
+  console.log('📥 Query API Response Body:', JSON.stringify(queryResult, null, 2));
+
+  // Check if any documents were found
+  if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
+    const documentId = queryResult.data.Data[0].customobject1004id;
+    console.log(`✅ Found existing document with ID: ${documentId}`);
+    return documentId;
+  }
+
+  console.log('❌ No existing document found');
   return null;
 }
 
