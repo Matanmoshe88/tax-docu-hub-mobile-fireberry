@@ -158,9 +158,15 @@ async function createNewDocument(recordId: string, contractSessionTimestamp: str
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
 
-  // Create the name field in the requested format
-  const documentName = `החזר מס ${leadData.Name}`;
-  console.log(`📝 Document name will be: ${documentName}`);
+  // Extract first and last names from the leadData.Name
+  const nameParts = leadData.Name.trim().split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+  
+  // Create the name field as requested: "החזר מס first name last name"
+  const documentName = `החזר מס ${firstName} ${lastName}`.trim();
+  console.log(`📝 Document name will be: "${documentName}"`);
+  console.log(`📝 Extracted names - First: "${firstName}", Last: "${lastName}"`);
 
   const response = await fetch('https://api.fireberry.com/api/record/1004', {
     method: 'POST',
