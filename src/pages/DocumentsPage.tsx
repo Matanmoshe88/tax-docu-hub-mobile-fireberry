@@ -214,11 +214,11 @@ export const DocumentsPage: React.FC = () => {
     });
 
     if (error) {
-      console.error('❌ Salesforce integration error:', error);
-      throw new Error(`Salesforce integration failed: ${error.message}`);
+      console.error('❌ Integration error:', error);
+      throw new Error(`Upload failed: ${error.message}`);
     }
 
-    console.log('✅ Document sent to Salesforce successfully:', data);
+    console.log('✅ Document sent successfully:', data);
     return data;
   };
 
@@ -272,7 +272,7 @@ export const DocumentsPage: React.FC = () => {
 
       toast({
         title: "הקובץ הועלה בהצלחה! 🎉",
-        description: `${document.title} נשמר במערכת ונשלח ל-Salesforce`,
+        description: `${document.title} נשמר במערכת בהצלחה`,
       });
 
     } catch (error) {
