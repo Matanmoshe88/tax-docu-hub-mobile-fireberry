@@ -150,13 +150,17 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
   return null;
 }
 
-async function createNewDocument(recordId: string, contractSessionTimestamp: string): Promise<void> {
+async function createNewDocument(recordId: string, contractSessionTimestamp: string, leadData: LeadData): Promise<void> {
   console.log(`📝 Creating new document for recordId: ${recordId}`);
   
   const tokenId = Deno.env.get('FIREBERRY_TOKEN_ID');
   if (!tokenId) {
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
+
+  // Create the name field in the requested format
+  const documentName = `החזר מס ${leadData.Name}`;
+  console.log(`📝 Document name will be: ${documentName}`);
 
   const response = await fetch('https://api.fireberry.com/api/record/1004', {
     method: 'POST',
@@ -167,6 +171,7 @@ async function createNewDocument(recordId: string, contractSessionTimestamp: str
     body: JSON.stringify({
       pcfsystemfield693: recordId,
       pcfsystemfield979: contractSessionTimestamp,
+      name: documentName,
     }),
   });
 
@@ -278,7 +283,7 @@ serve(async (req) => {
     if (!existingDocumentId) {
       // No existing document found, create a new one
       console.log('📝 No existing document found, creating new document');
-      await createNewDocument(leadId, leadData.ContractSessionTimestamp);
+      await createNewDocument(leadId, leadData.ContractSessionTimestamp, leadData);
       console.log('✅ New document created, staying on contract screen');
       
       // Query again to get the newly created document ID
