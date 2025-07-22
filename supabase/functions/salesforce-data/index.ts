@@ -202,6 +202,7 @@ async function fetchDocumentDetails(documentId: string): Promise<string | null> 
 }
 
 serve(async (req) => {
+  console.log('🚀🚀🚀 SALESFORCE DATA FUNCTION CALLED - DETAILED LOGGING VERSION - 2025-07-22T14:13 🚀🚀🚀');
   console.log('🚀 Fireberry data function called - v2 with detailed logging');
   console.log(`📝 Request method: ${req.method}`);
 
