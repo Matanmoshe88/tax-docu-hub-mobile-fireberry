@@ -33,6 +33,7 @@ export const useFireberryData = () => {
   const [isDataFresh, setIsDataFresh] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
   const [redirectTo, setRedirectTo] = useState('');
+  const [documentId, setDocumentId] = useState<string | null>(null);
 
   const isSessionExpired = (timestamp: number): boolean => {
     const thirtyMinutesInMs = 30 * 60 * 1000;
@@ -119,12 +120,19 @@ export const useFireberryData = () => {
         return;
       }
 
-      const { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo } = data.data;
+      const { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo, documentId: apiDocumentId } = data.data;
       console.log('✅ Fireberry data loaded successfully');
-      console.log('📊 API Response data:', { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo });
+      console.log('📊 API Response data:', { leadData, shouldRedirect: apiShouldRedirect, redirectTo: apiRedirectTo, documentId: apiDocumentId });
       console.log('🔍 DEBUG - Raw Fireberry response:', leadData._debug?.rawResponse);
       console.log('🔍 DEBUG - Available fields:', leadData._debug?.availableFields);
       console.log('🔍 LeadData fields:', Object.keys(leadData || {}));
+
+      // Store document ID
+      if (apiDocumentId) {
+        console.log('📝 Storing document ID from API:', apiDocumentId);
+        setDocumentId(apiDocumentId);
+        sessionStorage.setItem('docid', apiDocumentId);
+      }
 
       // Handle redirect logic
       if (apiShouldRedirect && apiRedirectTo) {
@@ -200,6 +208,7 @@ export const useFireberryData = () => {
     recordId,
     shouldRedirect,
     redirectTo,
+    documentId,
     refetchData: fetchFireberryData
   };
 };

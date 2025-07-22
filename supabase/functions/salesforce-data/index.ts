@@ -31,8 +31,9 @@ interface FireberryDataResponse {
   success: boolean;
   data?: {
     leadData: LeadData;
-    shouldRedirect?: boolean;
-    redirectTo?: string;
+    shouldRedirect: boolean;
+    redirectTo: string;
+    documentId?: string | null;
   };
   error?: string;
 }
@@ -248,12 +249,17 @@ serve(async (req) => {
 
     let shouldRedirect = false;
     let redirectTo = '';
+    let documentId = existingDocumentId;
 
     if (!existingDocumentId) {
       // No existing document found, create a new one
       console.log('📝 No existing document found, creating new document');
       await createNewDocument(leadId, leadData.ContractSessionTimestamp);
       console.log('✅ New document created, staying on contract screen');
+      
+      // Query again to get the newly created document ID
+      documentId = await queryExistingDocument(leadId, leadData.ContractSessionTimestamp);
+      console.log('📋 Retrieved new document ID:', documentId);
     } else {
       // Document exists, fetch its details to check if contract is already signed
       console.log('📋 Existing document found, checking contract status');
@@ -276,6 +282,7 @@ serve(async (req) => {
         leadData,
         shouldRedirect,
         redirectTo,
+        documentId: documentId // Add the document ID to the response
       }
     };
 

@@ -12,7 +12,7 @@ import { generateContractPDFBlob } from '@/lib/pdfGenerator';
 
 export const SignaturePage: React.FC = () => {
   const navigate = useNavigate();
-  const { clientData, recordId } = useFireberryData();
+  const { clientData, recordId, documentId } = useFireberryData();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
@@ -154,7 +154,8 @@ export const SignaturePage: React.FC = () => {
       body: {
         recordId: recordId,
         signatureUrl,
-        contractUrl
+        contractUrl,
+        documentId: documentId // Use existing document ID
       }
     });
 

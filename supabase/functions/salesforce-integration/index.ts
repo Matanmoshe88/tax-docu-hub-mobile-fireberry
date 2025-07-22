@@ -10,6 +10,7 @@ interface DocumentUploadRequest {
   recordId: string;
   signatureUrl: string;
   contractUrl: string;
+  documentId?: string; // Add optional documentId for updating existing documents
 }
 
 async function testFireberryAPI(): Promise<any> {
@@ -46,6 +47,47 @@ async function testFireberryAPI(): Promise<any> {
   }
 
   return JSON.parse(responseText);
+}
+
+async function updateExistingDocument(
+  documentId: string,
+  signatureUrl: string,
+  contractUrl: string
+): Promise<any> {
+  console.log(`🔄 Updating existing document ${documentId} in Fireberry`);
+  
+  const tokenId = Deno.env.get('FIREBERRY_TOKEN_ID');
+  if (!tokenId) {
+    throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
+  }
+
+  // Update JSON payload - only signature and contract fields
+  const payload = {
+    pcfsystemfield975: signatureUrl, // signature field
+    pcfsystemfield725: contractUrl   // contract field
+  };
+
+  console.log('📝 JSON update payload being sent:', payload);
+
+  const response = await fetch(`https://api.powerlink.co.il/api/record/1004/${documentId}`, {
+    method: 'PUT',
+    headers: {
+      'TokenId': tokenId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('❌ Fireberry document update failed:', response.status, errorText);
+    throw new Error(`Failed to update document: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  console.log('✅ Document updated successfully in Fireberry:', result);
+  
+  return { ...result, docid: documentId };
 }
 
 async function uploadDocumentToFireberry(
@@ -117,7 +159,7 @@ serve(async (req) => {
     const body = await req.json() as DocumentUploadRequest;
     console.log('📝 Request body:', JSON.stringify(body, null, 2));
 
-    const { recordId, signatureUrl, contractUrl } = body;
+    const { recordId, signatureUrl, contractUrl, documentId } = body;
 
     // Check if this is a test request
     if (recordId === 'TEST') {
@@ -139,12 +181,17 @@ serve(async (req) => {
 
     console.log('🔄 Starting Fireberry document upload...');
 
-    // Upload document to Fireberry
-    const uploadResult = await uploadDocumentToFireberry(
-      recordId, 
-      signatureUrl, 
-      contractUrl
-    );
+    let uploadResult;
+    
+    if (documentId) {
+      // Update existing document
+      console.log('🔄 Using existing document ID:', documentId);
+      uploadResult = await updateExistingDocument(documentId, signatureUrl, contractUrl);
+    } else {
+      // Create new document (fallback for backward compatibility)
+      console.log('🔄 No document ID provided, creating new document');
+      uploadResult = await uploadDocumentToFireberry(recordId, signatureUrl, contractUrl);
+    }
 
     const response = {
       success: true,
