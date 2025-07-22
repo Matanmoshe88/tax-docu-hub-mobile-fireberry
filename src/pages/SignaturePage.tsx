@@ -292,8 +292,8 @@ export const SignaturePage: React.FC = () => {
 
       // Send signature and contract to Fireberry
       toast({
-        title: "שולח לכותב...",
-        description: "מעביר את החתימה וההסכם למערכת הניהול",
+        title: "שומר חתימה...",
+        description: "מעבד את החתימה וההסכם",
       });
       
       const fireberryResult = await callFireberryIntegration(signatureUrl, contractUrl);

@@ -241,8 +241,8 @@ export const DocumentsPage: React.FC = () => {
       
       if (docid && documentType) {
         toast({
-          title: "שולח ל-Fireberry...",
-          description: "מעביר את הקובץ למערכת הניהול",
+          title: "שולח קובץ...",
+          description: "מעבד את הקובץ",
         });
 
         const { data, error } = await supabase.functions.invoke('document-upload', {

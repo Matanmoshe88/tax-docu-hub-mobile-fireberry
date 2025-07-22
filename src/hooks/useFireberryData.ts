@@ -99,7 +99,7 @@ export const useFireberryData = () => {
         console.error('❌ Supabase function error:', error);
         toast({
           title: "שגיאה",
-          description: "לא ניתן לטעון את נתוני הלקוח",
+          description: "לא ניתן לטעון את הנתונים",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -110,7 +110,7 @@ export const useFireberryData = () => {
         console.error('❌ Fireberry data error:', data?.error);
         toast({
           title: "שגיאה",
-          description: data?.error || "לא ניתן לטעון את נתוני הלקוח",
+          description: "לא ניתן לטעון את הנתונים",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -156,7 +156,7 @@ export const useFireberryData = () => {
       console.error('💥 Error fetching Fireberry data:', error);
       toast({
         title: "שגיאה",
-        description: "לא ניתן לטעון את נתוני הלקוח",
+        description: "לא ניתן לטעון את הנתונים",
         variant: "destructive",
       });
     } finally {
