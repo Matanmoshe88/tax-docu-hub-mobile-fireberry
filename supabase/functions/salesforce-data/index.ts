@@ -106,7 +106,7 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
     "objecttype": "1004",
     "sort_type": "desc",
     "query": `(pcfsystemfield693 = ${recordId} AND pcfsystemfield979 = ${contractSessionTimestamp})`,
-    "fields": "customobject1004id"
+    "fields": "customobject1004id,pcfsystemfield979"  // Also return the timestamp to see what we actually get
   };
 
   console.log('📤 Query API Request Body:', JSON.stringify(requestBody, null, 2));
@@ -130,6 +130,14 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
 
   const queryResult = await response.json() as any;
   console.log('📥 Query API Response Body:', JSON.stringify(queryResult, null, 2));
+  
+  // Log each returned document with its timestamp to debug the issue
+  if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
+    console.log(`📋 Found ${queryResult.data.Data.length} documents:`);
+    queryResult.data.Data.forEach((doc: any, index: number) => {
+      console.log(`📄 Document ${index + 1}: ID=${doc.customobject1004id}, Timestamp=${doc.pcfsystemfield979}`);
+    });
+  }
 
   // Check if any documents were found
   if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
