@@ -100,9 +100,23 @@ export const useFireberryData = () => {
 
       if (error) {
         console.error('❌ Supabase function error:', error);
+        
+        // Set fallback data when API fails
+        const fallbackData = {
+          firstName: "לקוח",
+          lastName: "דוגמה",
+          idNumber: "000000000",
+          phone: "",
+          email: "",
+          address: "",
+          commissionRate: "22%"
+        };
+        
+        setClientData(fallbackData);
+        
         toast({
           title: "שגיאה",
-          description: "לא ניתן לטעון את הנתונים",
+          description: "נטענו נתונים זמניים - אנא נסה שוב מאוחר יותר",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -111,9 +125,23 @@ export const useFireberryData = () => {
 
       if (!data?.success) {
         console.error('❌ Fireberry data error:', data?.error);
+        
+        // Set fallback data when API returns error
+        const fallbackData = {
+          firstName: "לקוח",
+          lastName: "דוגמה", 
+          idNumber: "000000000",
+          phone: "",
+          email: "",
+          address: "",
+          commissionRate: "22%"
+        };
+        
+        setClientData(fallbackData);
+        
         toast({
           title: "שגיאה",
-          description: "לא ניתן לטעון את הנתונים",
+          description: "נטענו נתונים זמניים - אנא נסה שוב מאוחר יותר",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -180,9 +208,23 @@ export const useFireberryData = () => {
 
     } catch (error) {
       console.error('💥 Error fetching Fireberry data:', error);
+      
+      // Set fallback data when there's a catch error
+      const fallbackData = {
+        firstName: "לקוח",
+        lastName: "דוגמה",
+        idNumber: "000000000", 
+        phone: "",
+        email: "",
+        address: "",
+        commissionRate: "22%"
+      };
+      
+      setClientData(fallbackData);
+      
       toast({
         title: "שגיאה",
-        description: "לא ניתן לטעון את הנתונים",
+        description: "נטענו נתונים זמניים - אנא נסה שוב מאוחר יותר",
         variant: "destructive",
       });
     } finally {
