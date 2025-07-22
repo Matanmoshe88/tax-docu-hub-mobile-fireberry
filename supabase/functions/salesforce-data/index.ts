@@ -92,36 +92,49 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
     throw new Error('Missing FIREBERRY_TOKEN_ID environment variable');
   }
 
+  const requestBody = {
+    "objecttype": "1004",
+    "sort_type": "desc",
+    "query": `(pcfsystemfield693 = ${recordId} AND pcfsystemfield979 = ${contractSessionTimestamp})`,
+    "fields": "customobject1004id"
+  };
+
+  console.log('📤 Query API Request Body:', JSON.stringify(requestBody, null, 2));
+
   const response = await fetch('https://api.powerlink.co.il/api/query', {
     method: 'POST',
     headers: {
       'TokenID': tokenId,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      "objecttype": "1004",
-      "sort_type": "desc",
-      "query": `(pcfsystemfield693 = ${recordId} AND pcfsystemfield979 = ${contractSessionTimestamp})`,
-      "fields": "customobject1004id"
-    }),
+    body: JSON.stringify(requestBody),
   });
+
+  console.log(`📥 Query API Response Status: ${response.status}`);
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`❌ Query API Error Response: ${errorText}`);
     throw new Error(`Failed to query existing document: ${response.status} - ${errorText}`);
   }
 
   const queryResult = await response.json() as any;
-  console.log('🔍 Document query result:', JSON.stringify(queryResult, null, 2));
+  console.log('📥 Query API Response Body:', JSON.stringify(queryResult, null, 2));
 
   // Check if any documents were found
   if (queryResult.data && queryResult.data.Data && queryResult.data.Data.length > 0) {
     const documentId = queryResult.data.Data[0].customobject1004id;
     console.log(`✅ Found existing document with ID: ${documentId}`);
+    console.log(`📊 Total documents found: ${queryResult.data.Data.length}`);
     return documentId;
   }
 
   console.log('❌ No existing document found');
+  console.log('🔍 Query result structure:', {
+    hasData: !!queryResult.data,
+    hasDataArray: !!queryResult.data?.Data,
+    dataLength: queryResult.data?.Data?.length || 0
+  });
   return null;
 }
 
