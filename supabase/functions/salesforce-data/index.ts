@@ -100,6 +100,8 @@ async function queryExistingDocument(recordId: string, contractSessionTimestamp:
   };
 
   console.log('📤 Query API Request Body:', JSON.stringify(requestBody, null, 2));
+  console.log('🌐 Query API URL: https://api.powerlink.co.il/api/query');
+  console.log('🔑 Using TokenID for query request');
 
   const response = await fetch('https://api.powerlink.co.il/api/query', {
     method: 'POST',
