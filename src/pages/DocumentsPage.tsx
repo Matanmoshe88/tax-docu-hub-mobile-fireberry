@@ -168,12 +168,46 @@ export const DocumentsPage: React.FC = () => {
   
   const canFinish = hasIdentityDocument && hasBankStatement;
 
-  // Convert image to PDF function
+  // Compress image function
+  const compressImage = (img: HTMLImageElement, quality: number = 0.8, maxWidth: number = 1200): HTMLCanvasElement => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) throw new Error('Could not get canvas context');
+
+    // Calculate new dimensions while maintaining aspect ratio
+    let { width, height } = img;
+    
+    if (width > maxWidth) {
+      height = (height * maxWidth) / width;
+      width = maxWidth;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Draw compressed image
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    return canvas;
+  };
+
+  // Convert image to PDF function with compression
   const convertImageToPDF = async (imageFile: File): Promise<File> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         try {
+          console.log(`🔄 Compressing ${imageFile.name}...`);
+          
+          // Compress the image first
+          const compressedCanvas = compressImage(img, 0.8, 1200);
+          
+          // Convert canvas to data URL for PDF
+          const compressedDataURL = compressedCanvas.toDataURL('image/jpeg', 0.8);
+          
+          console.log(`✅ Image compressed from ${img.width}x${img.height} to ${compressedCanvas.width}x${compressedCanvas.height}`);
+
           // Create a new PDF document
           const pdf = new jsPDF({
             orientation: 'portrait',
@@ -189,7 +223,7 @@ export const DocumentsPage: React.FC = () => {
           const maxHeight = pdfHeight - (margin * 2);
 
           // Calculate scaling to maintain aspect ratio
-          const imgRatio = img.width / img.height;
+          const imgRatio = compressedCanvas.width / compressedCanvas.height;
           let finalWidth = maxWidth;
           let finalHeight = maxWidth / imgRatio;
 
@@ -203,10 +237,10 @@ export const DocumentsPage: React.FC = () => {
           const x = (pdfWidth - finalWidth) / 2;
           const y = (pdfHeight - finalHeight) / 2;
 
-          // Add image to PDF
-          pdf.addImage(img, 'JPEG', x, y, finalWidth, finalHeight);
+          // Add compressed image to PDF
+          pdf.addImage(compressedDataURL, 'JPEG', x, y, finalWidth, finalHeight);
 
-          // Convert PDF to blob
+          // Convert PDF to blob with compression
           const pdfBlob = pdf.output('blob');
           
           // Create a new File object with PDF extension
@@ -215,7 +249,7 @@ export const DocumentsPage: React.FC = () => {
             type: 'application/pdf' 
           });
 
-          console.log(`✅ Converted ${imageFile.name} to PDF (${pdfFile.name})`);
+          console.log(`✅ Converted and compressed ${imageFile.name} to PDF (${pdfFile.name})`);
           resolve(pdfFile);
         } catch (error) {
           console.error('❌ Error converting image to PDF:', error);
@@ -372,16 +406,16 @@ export const DocumentsPage: React.FC = () => {
       if (file.type === 'image/jpeg' || file.type === 'image/png') {
         try {
           toast({
-            title: "ממיר תמונה ל-PDF...",
-            description: "התמונה תומרת לפורמט PDF",
+            title: "ממיר ומדחס תמונה ל-PDF...",
+            description: "התמונה תומרת ומדחסת לפורמט PDF",
           });
           
-          console.log(`🔄 Converting ${file.name} (${file.type}) to PDF...`);
+          console.log(`🔄 Converting and compressing ${file.name} (${file.type}) to PDF...`);
           fileToUpload = await convertImageToPDF(file);
           
           toast({
-            title: "ההמרה הושלמה בהצלחה",
-            description: "התמונה הומרה לפורמט PDF",
+            title: "ההמרה והדחיסה הושלמו בהצלחה",
+            description: "התמונה הומרה ודוחסה לפורמט PDF",
           });
         } catch (error) {
           console.error('❌ Error converting image to PDF:', error);
