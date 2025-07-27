@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createAndDownloadPDF } from '@/lib/pdfGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import { useFireberryData } from '@/hooks/useFireberryData';
+import { jsPDF } from 'jspdf';
 
 interface Document {
   id: string;
@@ -167,6 +168,70 @@ export const DocumentsPage: React.FC = () => {
   
   const canFinish = hasIdentityDocument && hasBankStatement;
 
+  // Convert image to PDF function
+  const convertImageToPDF = async (imageFile: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          // Create a new PDF document
+          const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          // Calculate dimensions to fit the image properly within A4
+          const pdfWidth = 210; // A4 width in mm
+          const pdfHeight = 297; // A4 height in mm
+          const margin = 10; // 10mm margin
+          const maxWidth = pdfWidth - (margin * 2);
+          const maxHeight = pdfHeight - (margin * 2);
+
+          // Calculate scaling to maintain aspect ratio
+          const imgRatio = img.width / img.height;
+          let finalWidth = maxWidth;
+          let finalHeight = maxWidth / imgRatio;
+
+          // If height exceeds max, scale by height instead
+          if (finalHeight > maxHeight) {
+            finalHeight = maxHeight;
+            finalWidth = maxHeight * imgRatio;
+          }
+
+          // Center the image
+          const x = (pdfWidth - finalWidth) / 2;
+          const y = (pdfHeight - finalHeight) / 2;
+
+          // Add image to PDF
+          pdf.addImage(img, 'JPEG', x, y, finalWidth, finalHeight);
+
+          // Convert PDF to blob
+          const pdfBlob = pdf.output('blob');
+          
+          // Create a new File object with PDF extension
+          const pdfFileName = imageFile.name.replace(/\.(jpg|jpeg|png)$/i, '.pdf');
+          const pdfFile = new File([pdfBlob], pdfFileName, { 
+            type: 'application/pdf' 
+          });
+
+          console.log(`✅ Converted ${imageFile.name} to PDF (${pdfFile.name})`);
+          resolve(pdfFile);
+        } catch (error) {
+          console.error('❌ Error converting image to PDF:', error);
+          reject(error);
+        }
+      };
+
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+
+      // Create object URL from file and set as image source
+      img.src = URL.createObjectURL(imageFile);
+    });
+  };
+
   const uploadDocumentToStorage = async (file: File, docId: string): Promise<string> => {
     console.log('🔄 Uploading document to Supabase storage...');
     
@@ -277,7 +342,7 @@ export const DocumentsPage: React.FC = () => {
     }
   };
 
-  const handleFileInputChange = (docId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (docId: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
@@ -301,7 +366,35 @@ export const DocumentsPage: React.FC = () => {
         return;
       }
 
-      handleFileUpload(docId, file);
+      // Check if file is an image and convert to PDF
+      let fileToUpload = file;
+      
+      if (file.type === 'image/jpeg' || file.type === 'image/png') {
+        try {
+          toast({
+            title: "ממיר תמונה ל-PDF...",
+            description: "התמונה תומרת לפורמט PDF",
+          });
+          
+          console.log(`🔄 Converting ${file.name} (${file.type}) to PDF...`);
+          fileToUpload = await convertImageToPDF(file);
+          
+          toast({
+            title: "ההמרה הושלמה בהצלחה",
+            description: "התמונה הומרה לפורמט PDF",
+          });
+        } catch (error) {
+          console.error('❌ Error converting image to PDF:', error);
+          toast({
+            title: "שגיאה בהמרת הקובץ",
+            description: "לא ניתן להמיר את התמונה ל-PDF. אנא נסה שוב.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      handleFileUpload(docId, fileToUpload);
     }
   };
 
