@@ -188,7 +188,7 @@ export const useFireberryData = () => {
         phone: leadData.MobilePhone || '',
         email: leadData.Email || '',
         address: leadData.fulladress__c || '',
-        commissionRate: leadData.Commission__c ? `${leadData.Commission__c}%` : '22%'
+        commissionRate: `${leadData.Commission__c ?? 22}%`
       };
 
       console.log('📊 Final updatedClientData being set:', updatedClientData);
