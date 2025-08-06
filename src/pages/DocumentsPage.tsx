@@ -288,12 +288,16 @@ export const DocumentsPage: React.FC = () => {
       .from('signatures')
       .getPublicUrl(fileName);
 
-    console.log('✅ Document uploaded to storage:', publicUrl);
+    if (import.meta.env.DEV) {
+      console.log('✅ Document uploaded to storage:', publicUrl);
+    }
     return publicUrl;
   };
 
   const sendDocumentToFireberry = async (documentUrl: string, contractUrl: string) => {
-    console.log('🔄 Sending document to Fireberry...');
+    if (import.meta.env.DEV) {
+      console.log('🔄 Sending document to Fireberry...');
+    }
     
     const { data, error } = await supabase.functions.invoke('salesforce-integration', {
       body: {
@@ -348,9 +352,13 @@ export const DocumentsPage: React.FC = () => {
           throw new Error(`Failed to update document in Fireberry: ${error.message}`);
         }
 
-        console.log('✅ Document URL updated in Fireberry:', data);
+        if (import.meta.env.DEV) {
+          console.log('✅ Document URL updated in Fireberry:', data);
+        }
       } else {
-        console.log('⚠️ No docid found or invalid document type, skipping Fireberry update');
+        if (import.meta.env.DEV) {
+          console.log('⚠️ No docid found or invalid document type, skipping Fireberry update');
+        }
       }
 
       // Update local state
