@@ -258,19 +258,23 @@ export const SignaturePage: React.FC = () => {
       console.log('✅ Signature saved to localStorage');
 
       // Upload signature to Supabase storage
-      toast({
-        title: "מעלה חתימה...",
-        description: "מעלה את החתימה לשירות האחסון",
-      });
+      if (import.meta.env.DEV) {
+        toast({
+          title: "מעלה חתימה...",
+          description: "מעלה את החתימה לשירות האחסון",
+        });
+      }
       
       const signatureUrl = await uploadSignatureToStorage(signatureBlob);
       console.log('✅ Signature uploaded to storage:', signatureUrl);
 
       // Generate signed contract
-      toast({
-        title: "יוצר הסכם חתום...",
-        description: "מכין את ההסכם עם החתימה",
-      });
+      if (import.meta.env.DEV) {
+        toast({
+          title: "יוצר הסכם חתום...",
+          description: "מכין את ההסכם עם החתימה",
+        });
+      }
       
       const contractBlob = await generateSignedContract(signatureDataURL);
       
@@ -292,19 +296,23 @@ export const SignaturePage: React.FC = () => {
         .getPublicUrl(contractFileName);
 
       // Send signature and contract to Fireberry
-      toast({
-        title: "שומר חתימה...",
-        description: "מעבד את החתימה וההסכם",
-      });
+      if (import.meta.env.DEV) {
+        toast({
+          title: "שומר חתימה...",
+          description: "מעבד את החתימה וההסכם",
+        });
+      }
       
       const fireberryResult = await callFireberryIntegration(signatureUrl, contractUrl);
       console.log('✅ Documents uploaded to Fireberry:', fireberryResult);
       
       setIsSigned(true);
-      toast({
-        title: "החתימה נשמרה בהצלחה! 🎉",
-        description: "החתימה נשלחה למערכת והמעבר לשלב הבא",
-      });
+      if (import.meta.env.DEV) {
+        toast({
+          title: "החתימה נשמרה בהצלחה! 🎉",
+          description: "החתימה נשלחה למערכת והמעבר לשלב הבא",
+        });
+      }
       
       // Keep loading animation for a moment before navigation
       await new Promise(resolve => setTimeout(resolve, 1500));
