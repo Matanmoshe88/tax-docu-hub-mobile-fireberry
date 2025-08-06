@@ -122,7 +122,9 @@ export const SignaturePage: React.FC = () => {
   };
 
   const uploadSignatureToStorage = async (signatureBlob: Blob): Promise<string> => {
-    console.log('🔄 Uploading signature to Supabase storage...');
+    if (import.meta.env.DEV) {
+      console.log('🔄 Uploading signature to Supabase storage...');
+    }
     
     const fileName = `signature-${recordId}-${Date.now()}.png`;
     
@@ -134,7 +136,9 @@ export const SignaturePage: React.FC = () => {
       });
 
     if (error) {
-      console.error('❌ Storage upload error:', error);
+      if (import.meta.env.DEV) {
+        console.error('❌ Storage upload error:', error);
+      }
       throw new Error(`Failed to upload signature: ${error.message}`);
     }
 
@@ -143,12 +147,16 @@ export const SignaturePage: React.FC = () => {
       .from('signatures')
       .getPublicUrl(fileName);
 
-    console.log('✅ Signature uploaded successfully:', publicUrl);
+    if (import.meta.env.DEV) {
+      console.log('✅ Signature uploaded successfully:', publicUrl);
+    }
     return publicUrl;
   };
 
   const callFireberryIntegration = async (signatureUrl: string, contractUrl: string) => {
-    console.log('🔄 Calling Fireberry integration...');
+    if (import.meta.env.DEV) {
+      console.log('🔄 Calling Fireberry integration...');
+    }
     
     const { data, error } = await supabase.functions.invoke('salesforce-integration', {
       body: {
@@ -160,23 +168,31 @@ export const SignaturePage: React.FC = () => {
     });
 
     if (error) {
-      console.error('❌ Salesforce integration error:', error);
+      if (import.meta.env.DEV) {
+        console.error('❌ Salesforce integration error:', error);
+      }
       throw new Error(`Salesforce integration failed: ${error.message}`);
     }
 
-    console.log('✅ Salesforce integration successful:', data);
+    if (import.meta.env.DEV) {
+      console.log('✅ Salesforce integration successful:', data);
+    }
     
     // Store docid for document uploads
     if (data?.docid) {
       sessionStorage.setItem('docid', data.docid);
-      console.log('📝 Stored docid for document uploads:', data.docid);
+      if (import.meta.env.DEV) {
+        console.log('📝 Stored docid for document uploads:', data.docid);
+      }
     }
     
     return data;
   };
 
   const generateSignedContract = async (signatureDataURL: string): Promise<Blob> => {
-    console.log('🔄 Generating signed contract PDF...');
+    if (import.meta.env.DEV) {
+      console.log('🔄 Generating signed contract PDF...');
+    }
     
     // Transform data to match new API structure
     const contractData = {
@@ -255,7 +271,10 @@ export const SignaturePage: React.FC = () => {
       // Save signature locally (for PDF generation)
       localStorage.setItem(`signature-${recordId}`, signatureDataURL);
       localStorage.setItem(`clientData-${recordId}`, JSON.stringify(clientData));
-      console.log('✅ Signature saved to localStorage');
+      
+      if (import.meta.env.DEV) {
+        console.log('✅ Signature saved to localStorage');
+      }
 
       // Upload signature to Supabase storage
       if (import.meta.env.DEV) {
@@ -266,7 +285,9 @@ export const SignaturePage: React.FC = () => {
       }
       
       const signatureUrl = await uploadSignatureToStorage(signatureBlob);
-      console.log('✅ Signature uploaded to storage:', signatureUrl);
+      if (import.meta.env.DEV) {
+        console.log('✅ Signature uploaded to storage:', signatureUrl);
+      }
 
       // Generate signed contract
       if (import.meta.env.DEV) {
@@ -304,7 +325,9 @@ export const SignaturePage: React.FC = () => {
       }
       
       const fireberryResult = await callFireberryIntegration(signatureUrl, contractUrl);
-      console.log('✅ Documents uploaded to Fireberry:', fireberryResult);
+      if (import.meta.env.DEV) {
+        console.log('✅ Documents uploaded to Fireberry:', fireberryResult);
+      }
       
       setIsSigned(true);
       if (import.meta.env.DEV) {
