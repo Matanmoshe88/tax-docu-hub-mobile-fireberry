@@ -67,7 +67,9 @@ async function updateExistingDocument(
     pcfsystemfield725: contractUrl   // contract field
   };
 
-  console.log('📝 JSON update payload being sent:', payload);
+  if (Deno.env.get('ENVIRONMENT') === 'development') {
+    console.log('📝 JSON update payload being sent:', payload);
+  }
 
   const response = await fetch(`https://api.powerlink.co.il/api/record/1004/${documentId}`, {
     method: 'PUT',
@@ -110,7 +112,9 @@ async function uploadDocumentToFireberry(
     pcfsystemfield725: contractUrl
   };
 
-  console.log('📝 JSON payload being sent:', payload);
+  if (Deno.env.get('ENVIRONMENT') === 'development') {
+    console.log('📝 JSON payload being sent:', payload);
+  }
 
   const response = await fetch('https://api.powerlink.co.il/api/record/1004', {
     method: 'POST',
@@ -157,7 +161,9 @@ serve(async (req) => {
     }
 
     const body = await req.json() as DocumentUploadRequest;
-    console.log('📝 Request body:', JSON.stringify(body, null, 2));
+    if (Deno.env.get('ENVIRONMENT') === 'development') {
+      console.log('📝 Request body:', JSON.stringify(body, null, 2));
+    }
 
     const { recordId, signatureUrl, contractUrl, documentId } = body;
 
@@ -203,7 +209,9 @@ serve(async (req) => {
       docid: uploadResult.docid
     };
 
-    console.log('🎉 Fireberry document upload completed successfully:', response);
+    if (Deno.env.get('ENVIRONMENT') === 'development') {
+      console.log('🎉 Fireberry document upload completed successfully:', response);
+    }
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

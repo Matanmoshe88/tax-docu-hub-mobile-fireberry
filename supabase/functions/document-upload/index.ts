@@ -42,8 +42,10 @@ async function updateDocumentUrl(
     [fieldName]: documentUrl
   };
 
-  console.log('📝 JSON payload being sent:', payload);
-  console.log('🎯 Target URL:', `https://api.powerlink.co.il/api/record/1004/${docid}`);
+  if (Deno.env.get('ENVIRONMENT') === 'development') {
+    console.log('📝 JSON payload being sent:', payload);
+    console.log('🎯 Target URL:', `https://api.powerlink.co.il/api/record/1004/${docid}`);
+  }
 
   const response = await fetch(`https://api.powerlink.co.il/api/record/1004/${docid}`, {
     method: 'PUT',
@@ -82,7 +84,9 @@ serve(async (req) => {
     }
 
     const body = await req.json() as DocumentUpdateRequest;
-    console.log('📝 Request body:', JSON.stringify(body, null, 2));
+    if (Deno.env.get('ENVIRONMENT') === 'development') {
+      console.log('📝 Request body:', JSON.stringify(body, null, 2));
+    }
 
     const { docid, documentType, documentUrl } = body;
 
@@ -108,7 +112,9 @@ serve(async (req) => {
       updateResult
     };
 
-    console.log('🎉 Document URL update completed successfully:', response);
+    if (Deno.env.get('ENVIRONMENT') === 'development') {
+      console.log('🎉 Document URL update completed successfully:', response);
+    }
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
