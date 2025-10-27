@@ -50,7 +50,7 @@ export const PaymentPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       {/* Logo */}
-      <div className="pt-6 pr-6">
+      <div className="pt-3 pr-6">
         <img 
           src={quicktaxLogo} 
           alt="QuickTax" 
