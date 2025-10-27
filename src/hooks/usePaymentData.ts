@@ -8,6 +8,7 @@ export interface PaymentData {
   commissionRate: number;
   feeBeforeVAT: number;
   totalPayment: number;
+  paymentStatus: number;
 }
 
 export const usePaymentData = (recordId: string | undefined) => {

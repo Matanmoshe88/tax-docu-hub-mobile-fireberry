@@ -50,8 +50,10 @@ export const PaymentPage = () => {
     );
   }
 
+  const isPaid = paymentData.paymentStatus !== 1;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+    <div className="min-h-screen bg-background flex flex-col relative" dir="rtl">
       {/* Logo */}
       <div className="pt-2 pr-4 md:pt-3 md:pr-6">
         <img 
@@ -62,7 +64,7 @@ export const PaymentPage = () => {
       </div>
 
       {/* Full Page Card */}
-      <Card className="flex-1 rounded-t-3xl shadow-elegant border-0 overflow-hidden mt-1 md:mt-2">
+      <Card className={`flex-1 rounded-t-3xl shadow-elegant border-0 overflow-hidden mt-1 md:mt-2 ${isPaid ? 'blur-sm' : ''}`}>
         <CardContent className="p-4 pb-24 space-y-4 md:p-8 md:pb-32 md:space-y-8">
           {/* Greeting */}
           <div className="text-center">
@@ -123,16 +125,24 @@ export const PaymentPage = () => {
         </CardContent>
       </Card>
 
-      {/* Sticky Glass Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
-        <Button
-          onClick={handlePayment}
-          className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
-        >
-          <ShieldCheck className="w-5 h-5" />
-          מעבר לתשלום מאובטח
-        </Button>
-      </div>
+      {/* Sticky Glass Button or Paid Overlay */}
+      {isPaid ? (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-green-500 text-white px-12 py-6 rounded-2xl text-3xl md:text-4xl font-bold shadow-2xl">
+            שולם
+          </div>
+        </div>
+      ) : (
+        <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
+          <Button
+            onClick={handlePayment}
+            className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
+          >
+            <ShieldCheck className="w-5 h-5" />
+            מעבר לתשלום מאובטח
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

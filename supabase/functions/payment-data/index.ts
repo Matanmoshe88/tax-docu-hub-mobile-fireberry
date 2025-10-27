@@ -16,6 +16,7 @@ interface FireberryResponse {
       pcfsystemfield812: number; // commission
       pcfsystemfield813: number; // amount no vat
       pcfsystemfield819: number; // amount to pay
+      pcfsystemfield811: number; // payment status (1=not paid, 2/3=paid)
     }
   }
 }
@@ -62,6 +63,7 @@ serve(async (req) => {
       commissionRate: record.pcfsystemfield812,
       feeBeforeVAT: record.pcfsystemfield813,
       totalPayment: record.pcfsystemfield819,
+      paymentStatus: record.pcfsystemfield811,
     };
 
     return new Response(
