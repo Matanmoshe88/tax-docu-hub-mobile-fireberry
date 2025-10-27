@@ -2,6 +2,8 @@ import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { he } from "date-fns/locale";
 import quicktaxLogo from "@/assets/quicktax-logo.png";
 import { usePaymentData } from "@/hooks/usePaymentData";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -13,6 +15,15 @@ const formatCurrency = (amount: number): string => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+};
+
+const formatDate = (dateString: string): string => {
+  try {
+    const date = parseISO(dateString);
+    return format(date, 'd MMMM yyyy', { locale: he });
+  } catch {
+    return dateString;
+  }
 };
 
 export const PaymentPage = () => {
@@ -64,7 +75,7 @@ export const PaymentPage = () => {
           <div className="text-center space-y-4">
             <p className="text-base leading-relaxed text-foreground">
               אנו שמחים לבשר לך כי החזר המס שהגשנו עבורך אושר וביום{" "}
-              <span className="font-semibold">{paymentData.depositDate}</span> יופקד לחשבונך{" "}
+              <span className="font-semibold">{formatDate(paymentData.depositDate)}</span> יופקד לחשבונך{" "}
               <span className="font-semibold text-2xl">{formatCurrency(paymentData.refundAmount)}</span>.
             </p>
             
@@ -92,6 +103,11 @@ export const PaymentPage = () => {
             <div className="flex justify-between items-center text-base">
               <span className="text-muted-foreground">שכ"ט ללא מעמ</span>
               <span className="font-medium text-foreground">{formatCurrency(paymentData.feeBeforeVAT)}</span>
+            </div>
+
+            <div className="flex justify-between items-center text-base">
+              <span className="text-muted-foreground">מע״מ</span>
+              <span className="font-medium text-foreground">{formatCurrency(paymentData.totalPayment - paymentData.feeBeforeVAT)}</span>
             </div>
 
             <div className="h-px bg-border my-4" />
