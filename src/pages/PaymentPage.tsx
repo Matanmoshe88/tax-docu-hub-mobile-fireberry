@@ -80,14 +80,6 @@ export const PaymentPage = () => {
               <span className="font-semibold">{formatDate(paymentData.depositDate)}</span> יופקד לחשבונך{" "}
               <span className="font-semibold text-xl md:text-2xl">{formatCurrency(paymentData.refundAmount)}</span>.
             </p>
-            
-            <p className="text-sm md:text-base text-foreground pt-2 md:pt-4">
-              יש ללחוץ על הכפתור על מנת להסדיר את התשלום.
-            </p>
-            
-            <p className="text-xs md:text-sm text-muted-foreground pt-1 md:pt-2">
-              באהבה צוות קוויק טקס ❤️
-            </p>
           </div>
 
           {/* Payment Details */}
@@ -121,6 +113,17 @@ export const PaymentPage = () => {
                 {formatCurrency(paymentData.totalPayment)}
               </span>
             </div>
+          </div>
+
+          {/* Payment Instructions */}
+          <div className="text-center space-y-2 md:space-y-3 pt-4 md:pt-6">
+            <p className="text-sm md:text-base text-foreground">
+              יש ללחוץ על הכפתור על מנת להסדיר את התשלום.
+            </p>
+            
+            <p className="text-xs md:text-sm text-muted-foreground">
+              באהבה צוות קוויק טקס ❤️
+            </p>
           </div>
         </CardContent>
       </Card>
