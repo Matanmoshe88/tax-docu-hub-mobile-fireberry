@@ -3,30 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck } from "lucide-react";
 import quicktaxLogo from "@/assets/quicktax-logo.png";
-
-interface PaymentData {
-  clientName: string;
-  depositDate: string;
-  refundAmount: number;
-  commissionRate: number;
-  feeBeforeVAT: number;
-  totalPayment: number;
-}
-
-const getMockPaymentData = (recordId: string): PaymentData => {
-  const refundAmount = 12500;
-  const commissionRate = 25;
-  const feeBeforeVAT = refundAmount * (commissionRate / 100);
-  
-  return {
-    clientName: "יוסי כהן",
-    depositDate: "15/02/2025",
-    refundAmount,
-    commissionRate,
-    feeBeforeVAT,
-    totalPayment: feeBeforeVAT,
-  };
-};
+import { usePaymentData } from "@/hooks/usePaymentData";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('he-IL', {
@@ -39,13 +17,27 @@ const formatCurrency = (amount: number): string => {
 
 export const PaymentPage = () => {
   const { recordId } = useParams();
-  const paymentData = getMockPaymentData(recordId || "");
+  const { paymentData, isLoading, error } = usePaymentData(recordId);
 
   const handlePayment = () => {
     // TODO: Integrate with CardCom payment provider
     console.log('Redirecting to CardCom payment for record:', recordId);
     window.location.href = 'https://secure.cardcom.solutions/...'; // Placeholder
   };
+
+  if (isLoading) {
+    return <LoadingOverlay isVisible={true} />;
+  }
+
+  if (error || !paymentData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+        <Card className="p-8">
+          <p className="text-destructive">שגיאה בטעינת נתוני התשלום</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
