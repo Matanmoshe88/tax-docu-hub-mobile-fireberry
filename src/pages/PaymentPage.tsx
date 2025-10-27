@@ -50,17 +50,24 @@ export const PaymentPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       {/* Logo */}
-      <div className="text-center pt-8 pb-6">
+      <div className="text-center pt-8 pb-4">
         <img 
           src={quicktaxLogo} 
           alt="QuickTax" 
-          className="h-14 mx-auto"
+          className="h-24 mx-auto"
         />
       </div>
 
       {/* Full Page Card */}
       <Card className="flex-1 rounded-t-3xl shadow-elegant border-0 overflow-hidden">
         <CardContent className="p-8 pb-32 space-y-8">
+          {/* Greeting */}
+          <div className="text-right">
+            <p className="text-lg font-medium text-foreground">
+              שלום, {paymentData.clientName}
+            </p>
+          </div>
+
           {/* Message */}
           <div className="text-center space-y-4">
             <p className="text-base leading-relaxed text-foreground">
@@ -80,6 +87,11 @@ export const PaymentPage = () => {
 
           {/* Payment Details */}
           <div className="space-y-4 pt-6">
+            <div className="flex justify-between items-center text-base">
+              <span className="text-muted-foreground">סכום ההחזר</span>
+              <span className="font-medium text-foreground">{formatCurrency(paymentData.refundAmount)}</span>
+            </div>
+
             <div className="flex justify-between items-center text-base">
               <span className="text-muted-foreground">שיעור עמלה</span>
               <span className="font-medium text-foreground">{paymentData.commissionRate}%</span>
