@@ -86,7 +86,7 @@ export const PaymentPage = () => {
           </div>
 
           {/* Payment Details */}
-          <div className="space-y-4 pt-6 max-w-md mx-auto">
+          <div className="space-y-4 pt-6 max-w-sm mx-auto">
             <div className="flex justify-between items-center text-base">
               <span className="text-muted-foreground">סכום ההחזר</span>
               <span className="font-medium text-foreground">{formatCurrency(paymentData.refundAmount)}</span>
