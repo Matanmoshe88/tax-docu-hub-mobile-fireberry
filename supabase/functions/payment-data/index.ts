@@ -17,6 +17,7 @@ interface FireberryResponse {
       pcfsystemfield813: number; // amount no vat
       pcfsystemfield819: number; // amount to pay
       pcfsystemfield811: number; // payment status (1=not paid, 2/3=paid)
+      pcfsystemfield838: string; // CardCom payment URL
     }
   }
 }
@@ -64,6 +65,7 @@ serve(async (req) => {
       feeBeforeVAT: record.pcfsystemfield813,
       totalPayment: record.pcfsystemfield819,
       paymentStatus: record.pcfsystemfield811,
+      paymentUrl: record.pcfsystemfield838,
     };
 
     return new Response(

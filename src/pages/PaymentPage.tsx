@@ -31,9 +31,9 @@ export const PaymentPage = () => {
   const { paymentData, isLoading, error } = usePaymentData(recordId);
 
   const handlePayment = () => {
-    // TODO: Integrate with CardCom payment provider
-    console.log('Redirecting to CardCom payment for record:', recordId);
-    window.location.href = 'https://secure.cardcom.solutions/...'; // Placeholder
+    if (paymentData?.paymentUrl) {
+      window.location.href = paymentData.paymentUrl;
+    }
   };
 
   if (isLoading) {
