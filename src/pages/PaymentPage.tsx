@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import quicktaxLogo from "@/assets/quicktax-logo.png";
 
 interface PaymentData {
   clientName: string;
@@ -47,73 +47,68 @@ export const PaymentPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20 py-12 px-4 md:px-6 lg:px-8" dir="rtl">
-      <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
-        {/* Header Section */}
-        <div className="text-center space-y-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-            שלום {paymentData.clientName} איזה כיף!
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground">
-            ביום {paymentData.depositDate} יופקד לחשבונך החזר מס על סך{" "}
-            <span className="font-semibold text-success">{formatCurrency(paymentData.refundAmount)}</span>
-          </p>
+    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-md animate-fade-in">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <img 
+            src={quicktaxLogo} 
+            alt="QuickTax" 
+            className="h-16 mx-auto"
+          />
         </div>
 
-        {/* Payment Details Card */}
-        <Card className="shadow-elegant overflow-hidden">
-          <CardContent className="p-6 md:p-8 space-y-6">
-            {/* Refund Amount */}
-            <div className="flex justify-between items-center">
-              <span className="text-sm md:text-base text-muted-foreground">סכום החזר:</span>
-              <span className="text-lg md:text-xl font-semibold text-success">
+        {/* Payment Card */}
+        <Card className="shadow-card border-0 overflow-hidden">
+          <CardContent className="p-8 space-y-6">
+            {/* Client Name */}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-1">שלום</p>
+              <h1 className="text-2xl font-semibold text-foreground">{paymentData.clientName}</h1>
+            </div>
+
+            {/* Deposit Info */}
+            <div className="text-center py-4 px-4 bg-muted/40 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-2">
+                ביום {paymentData.depositDate} יופקד לחשבונך
+              </p>
+              <p className="text-3xl font-bold text-foreground">
                 {formatCurrency(paymentData.refundAmount)}
-              </span>
+              </p>
             </div>
 
-            <Separator />
+            {/* Payment Details */}
+            <div className="space-y-3 pt-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">שיעור עמלה</span>
+                <span className="font-medium text-foreground">{paymentData.commissionRate}%</span>
+              </div>
+              
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">שכ"ט ללא מעמ</span>
+                <span className="font-medium text-foreground">{formatCurrency(paymentData.feeBeforeVAT)}</span>
+              </div>
 
-            {/* Commission Rate */}
-            <div className="flex justify-between items-center">
-              <span className="text-sm md:text-base text-muted-foreground">שיעור עמלה:</span>
-              <span className="text-lg md:text-xl font-semibold">
-                {paymentData.commissionRate}%
-              </span>
+              <div className="h-px bg-border my-4" />
+
+              {/* Total */}
+              <div className="flex justify-between items-center">
+                <span className="text-base font-medium text-foreground">סכום לתשלום</span>
+                <span className="text-2xl font-bold text-foreground">
+                  {formatCurrency(paymentData.totalPayment)}
+                </span>
+              </div>
             </div>
 
-            <Separator />
-
-            {/* Fee Before VAT */}
-            <div className="flex justify-between items-center">
-              <span className="text-sm md:text-base text-muted-foreground">שכ"ט ללא מעמ:</span>
-              <span className="text-lg md:text-xl font-semibold">
-                {formatCurrency(paymentData.feeBeforeVAT)}
-              </span>
-            </div>
-
-            <Separator className="my-6" />
-
-            {/* Total Payment - Highlighted */}
-            <div className="bg-primary/5 -mx-6 md:-mx-8 px-6 md:px-8 py-6 flex justify-between items-center border-t-2 border-b-2 border-primary/20">
-              <span className="text-base md:text-lg font-bold text-foreground">סכום לתשלום:</span>
-              <span className="text-2xl md:text-3xl font-bold text-primary">
-                {formatCurrency(paymentData.totalPayment)}
-              </span>
-            </div>
+            {/* Payment Button */}
+            <Button
+              onClick={handlePayment}
+              className="w-full h-12 text-base font-medium mt-6"
+            >
+              לתשלום
+            </Button>
           </CardContent>
         </Card>
-
-        {/* CTA Button */}
-        <div className="flex justify-center pt-4">
-          <Button
-            onClick={handlePayment}
-            size="lg"
-            variant="gradient"
-            className="w-full md:w-auto md:min-w-[300px] text-lg md:text-xl py-6 md:py-7"
-          >
-            לתשלום
-          </Button>
-        </div>
       </div>
     </div>
   );
