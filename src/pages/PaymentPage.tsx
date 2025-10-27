@@ -81,12 +81,12 @@ export const PaymentPage = () => {
             </p>
             
             <p className="text-sm text-muted-foreground pt-2">
-              באהבה ❤️ צוות קוויק טקס.
+              באהבה צוות קוויק טקס ❤️
             </p>
           </div>
 
           {/* Payment Details */}
-          <div className="space-y-4 pt-6">
+          <div className="space-y-4 pt-6 max-w-md mx-auto">
             <div className="flex justify-between items-center text-base">
               <span className="text-muted-foreground">סכום ההחזר</span>
               <span className="font-medium text-foreground">{formatCurrency(paymentData.refundAmount)}</span>
@@ -119,7 +119,7 @@ export const PaymentPage = () => {
       <div className="fixed bottom-0 left-0 right-0 p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
         <Button
           onClick={handlePayment}
-          className="w-full h-14 text-base font-medium gap-2"
+          className="w-full h-16 text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
         >
           <ShieldCheck className="w-5 h-5" />
           מעבר לתשלום מאובטח
