@@ -50,19 +50,19 @@ export const PaymentPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
       {/* Logo */}
-      <div className="text-center pt-8 pb-4">
+      <div className="pt-6 pr-6">
         <img 
           src={quicktaxLogo} 
           alt="QuickTax" 
-          className="h-24 mx-auto"
+          className="h-24"
         />
       </div>
 
       {/* Full Page Card */}
-      <Card className="flex-1 rounded-t-3xl shadow-elegant border-0 overflow-hidden">
+      <Card className="flex-1 rounded-t-3xl shadow-elegant border-0 overflow-hidden mt-2">
         <CardContent className="p-8 pb-32 space-y-8">
           {/* Greeting */}
-          <div className="text-right">
+          <div className="text-center">
             <p className="text-lg font-medium text-foreground">
               שלום, {paymentData.clientName}
             </p>
@@ -81,7 +81,7 @@ export const PaymentPage = () => {
             </p>
             
             <p className="text-sm text-muted-foreground pt-2">
-              באהבה צוות קוויק טקס.
+              באהבה ❤️ צוות קוויק טקס.
             </p>
           </div>
 
