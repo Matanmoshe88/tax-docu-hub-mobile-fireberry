@@ -10,6 +10,7 @@ import AuthPage from "./pages/AuthPage";
 import { SignaturePage } from "./pages/SignaturePage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { FinishPage } from "./pages/FinishPage";
+import { PaymentPage } from "./pages/PaymentPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           
           <Route path="/signature/:recordId" element={<SignaturePage />} />
           <Route path="/documents/:recordId" element={<DocumentsPage />} />
+          <Route path="/payment/:recordId" element={<PaymentPage />} />
           <Route path="/finish/:recordId" element={<FinishPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
