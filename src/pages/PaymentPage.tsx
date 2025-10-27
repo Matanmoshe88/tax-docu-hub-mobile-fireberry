@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Lock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { he } from "date-fns/locale";
 import quicktaxLogo from "@/assets/quicktax-logo.png";
@@ -128,8 +128,9 @@ export const PaymentPage = () => {
       {/* Sticky Glass Button or Paid Overlay */}
       {isPaid ? (
         <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-green-500 text-white px-12 py-6 rounded-2xl text-3xl md:text-4xl font-bold shadow-2xl">
-            שולם
+          <div className="bg-success/10 backdrop-blur-md border border-success/30 text-success px-10 py-8 rounded-3xl shadow-xl flex flex-col items-center gap-4 animate-scale-in">
+            <Lock className="w-12 h-12 md:w-16 md:h-16 text-success" />
+            <span className="text-2xl md:text-3xl font-semibold">שולם</span>
           </div>
         </div>
       ) : (
