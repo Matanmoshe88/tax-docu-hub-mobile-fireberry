@@ -5,14 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface FireberryPaymentData {
-  pcfsystemfield814: string; // first name
-  pcfsystemfield815: string; // last name
-  pcfsystemfield804: string; // date of refund
-  pcfsystemfield803: number; // refund amount
-  pcfsystemfield812: number; // commission
-  pcfsystemfield813: number; // amount no vat
-  pcfsystemfield819: number; // amount to pay
+interface FireberryResponse {
+  success: boolean;
+  data: {
+    Record: {
+      pcfsystemfield814: string; // first name
+      pcfsystemfield815: string; // last name
+      pcfsystemfield804: string; // date of refund
+      pcfsystemfield803: number; // refund amount
+      pcfsystemfield812: number; // commission
+      pcfsystemfield813: number; // amount no vat
+      pcfsystemfield819: number; // amount to pay
+    }
+  }
 }
 
 serve(async (req) => {
@@ -44,17 +49,19 @@ serve(async (req) => {
       throw new Error(`Fireberry API error: ${response.status}`);
     }
 
-    const data = await response.json() as FireberryPaymentData;
+    const fireberryData = await response.json() as FireberryResponse;
 
-    console.log('Fireberry payment data:', data);
+    console.log('Fireberry payment data:', fireberryData);
+
+    const record = fireberryData.data.Record;
 
     const paymentData = {
-      clientName: `${data.pcfsystemfield814} ${data.pcfsystemfield815}`,
-      depositDate: data.pcfsystemfield804,
-      refundAmount: data.pcfsystemfield803,
-      commissionRate: data.pcfsystemfield812,
-      feeBeforeVAT: data.pcfsystemfield813,
-      totalPayment: data.pcfsystemfield819,
+      clientName: `${record.pcfsystemfield814} ${record.pcfsystemfield815}`,
+      depositDate: record.pcfsystemfield804,
+      refundAmount: record.pcfsystemfield803,
+      commissionRate: record.pcfsystemfield812,
+      feeBeforeVAT: record.pcfsystemfield813,
+      totalPayment: record.pcfsystemfield819,
     };
 
     return new Response(
