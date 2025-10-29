@@ -2,12 +2,14 @@ import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Lock } from "lucide-react";
+import { ShieldCheck, Lock, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { he } from "date-fns/locale";
 import quicktaxLogo from "@/assets/quicktax-logo.png";
 import { usePaymentData } from "@/hooks/usePaymentData";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Drawer,
   DrawerContent,
@@ -36,9 +38,12 @@ const formatDate = (dateString: string): string => {
 export const PaymentPage = () => {
   const { recordId } = useParams();
   const { paymentData, isLoading, error, refetch } = usePaymentData(recordId);
+  const { toast } = useToast();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(Date.now());
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
+  const [dynamicPaymentUrl, setDynamicPaymentUrl] = useState<string | null>(null);
 
   // ===== CRITICAL: Cache-busting and fresh load logic =====
   useEffect(() => {
@@ -75,13 +80,44 @@ export const PaymentPage = () => {
     };
   }, [refetch]);
 
-  const handlePayment = () => {
-    if (!paymentData?.paymentUrl) return;
+  const handlePayment = async () => {
+    if (!recordId) return;
     
-    // Generate fresh iframe with new key to force reload
-    setIframeKey(Date.now());
-    setIsDrawerOpen(true);
-    setIsIframeLoading(true);
+    setIsCreatingPayment(true);
+    
+    try {
+      console.log('Creating fresh payment for record:', recordId);
+      
+      const { data, error: functionError } = await supabase.functions.invoke('create-payment', {
+        body: { recordId }
+      });
+
+      if (functionError) {
+        console.error('Function error:', functionError);
+        throw functionError;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create payment');
+      }
+
+      console.log('Payment created successfully:', data.paymentUrl);
+      
+      // Store the dynamic payment URL and open drawer
+      setDynamicPaymentUrl(data.paymentUrl);
+      setIframeKey(Date.now());
+      setIsDrawerOpen(true);
+      setIsIframeLoading(true);
+      
+    } catch (err) {
+      console.error('Error creating payment:', err);
+      toast({
+        title: "נראה שיש לנו בעיה כרגע",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingPayment(false);
+    }
   };
 
   if (isLoading) {
@@ -100,8 +136,9 @@ export const PaymentPage = () => {
 
   const isPaid = paymentData.paymentStatus !== 1;
 
-  // Add cache-busting timestamp to payment URL
-  const freshPaymentUrl = `${paymentData.paymentUrl}${paymentData.paymentUrl.includes('?') ? '&' : '?'}ts=${iframeKey}`;
+  // Use dynamic payment URL if available, otherwise fallback to stored URL
+  const paymentUrl = dynamicPaymentUrl || paymentData.paymentUrl;
+  const freshPaymentUrl = paymentUrl ? `${paymentUrl}${paymentUrl.includes('?') ? '&' : '?'}ts=${iframeKey}` : '';
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative" dir="rtl">
@@ -191,10 +228,20 @@ export const PaymentPage = () => {
         <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
           <Button
             onClick={handlePayment}
+            disabled={isCreatingPayment}
             className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
           >
-            <ShieldCheck className="w-5 h-5" />
-            מעבר לתשלום מאובטח
+            {isCreatingPayment ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                יוצר תשלום...
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="w-5 h-5" />
+                מעבר לתשלום מאובטח
+              </>
+            )}
           </Button>
         </div>
       )}
@@ -215,7 +262,7 @@ export const PaymentPage = () => {
                 </div>
               </div>
             )}
-            {paymentData?.paymentUrl && (
+            {freshPaymentUrl && (
               <iframe
                 key={iframeKey} // Force new iframe on key change
                 src={freshPaymentUrl} // URL with cache-busting timestamp

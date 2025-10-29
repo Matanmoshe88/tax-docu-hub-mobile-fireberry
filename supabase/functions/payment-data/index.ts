@@ -19,6 +19,11 @@ interface FireberryResponse {
       pcfsystemfield819: number; // amount to pay
       pcfsystemfield811: number; // payment status (1=not paid, 2/3=paid)
       pcfsystemfield838: string; // CardCom payment URL
+      pcfsystemfield770: string; // oppid
+      pcfsystemfield767: string; // accountid
+      pcfsystemfield817: string; // ID number
+      pcfsystemfield816: string; // phone
+      pcfsystemfield822: string; // email
     }
   }
 }
