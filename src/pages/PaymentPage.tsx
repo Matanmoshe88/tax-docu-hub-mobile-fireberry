@@ -57,17 +57,15 @@ export const PaymentPage = () => {
     }
   }, [isInApp]);
 
-  // Auto-refetch on visibility/focus/pageshow (but not when drawer is open)
+  // Auto-refetch on visibility/focus/pageshow (only when drawer is closed)
   useEffect(() => {
+    if (isDrawerOpen) return; // Don't set up listeners when drawer is open
+    
     const onVisible = () => { 
-      if (document.visibilityState === 'visible' && !isDrawerOpen) refetch(); 
+      if (document.visibilityState === 'visible') refetch(); 
     };
-    const onFocus = () => {
-      if (!isDrawerOpen) refetch();
-    };
-    const onPageShow = () => {
-      if (!isDrawerOpen) refetch();
-    };
+    const onFocus = () => refetch();
+    const onPageShow = () => refetch();
     
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onFocus);
@@ -205,7 +203,16 @@ export const PaymentPage = () => {
       )}
 
       {/* Payment Drawer */}
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+      <Drawer 
+        open={isDrawerOpen} 
+        onOpenChange={(open) => {
+          setIsDrawerOpen(open);
+          if (!open) {
+            // Refetch when drawer closes to check payment status
+            refetch();
+          }
+        }}
+      >
         <DrawerContent className="h-[90vh]">
           <DrawerHeader>
             <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
