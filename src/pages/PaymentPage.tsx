@@ -166,9 +166,9 @@ export const PaymentPage = () => {
             {isIframeLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
                 <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-primary animate-dot-bounce-1"></div>
-                  <div className="w-3 h-3 rounded-full bg-secondary animate-dot-bounce-2"></div>
-                  <div className="w-3 h-3 rounded-full bg-warning animate-dot-bounce-3"></div>
+                  <div className="w-3 h-3 rounded-full bg-brand-blue animate-dot-bounce-1"></div>
+                  <div className="w-3 h-3 rounded-full bg-brand-green animate-dot-bounce-2"></div>
+                  <div className="w-3 h-3 rounded-full bg-brand-yellow animate-dot-bounce-3"></div>
                 </div>
               </div>
             )}

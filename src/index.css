@@ -40,6 +40,12 @@ All colors MUST be HSL.
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
+    /* Brand colors for loader */
+    --brand-blue: 214 91% 65%;
+    --brand-green: 154 100% 40%;
+    --brand-yellow: 48 100% 50%;
+
+
     --border: 210 20% 90%;
     --input: 210 20% 95%;
     --ring: 214 84% 56%;
