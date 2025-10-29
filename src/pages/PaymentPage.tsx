@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -7,6 +8,12 @@ import { he } from "date-fns/locale";
 import quicktaxLogo from "@/assets/quicktax-logo.png";
 import { usePaymentData } from "@/hooks/usePaymentData";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('he-IL', {
@@ -29,11 +36,10 @@ const formatDate = (dateString: string): string => {
 export const PaymentPage = () => {
   const { recordId } = useParams();
   const { paymentData, isLoading, error } = usePaymentData(recordId);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handlePayment = () => {
-    if (paymentData?.paymentUrl) {
-      window.location.href = paymentData.paymentUrl;
-    }
+    setIsDrawerOpen(true);
   };
 
   if (isLoading) {
@@ -147,6 +153,25 @@ export const PaymentPage = () => {
           </Button>
         </div>
       )}
+
+      {/* Payment Drawer */}
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <DrawerContent className="h-[90vh]">
+          <DrawerHeader>
+            <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
+          </DrawerHeader>
+          <div className="flex-1 overflow-hidden">
+            {paymentData?.paymentUrl && (
+              <iframe
+                src={paymentData.paymentUrl}
+                className="w-full h-full border-0"
+                title="CardCom Payment"
+                allow="payment"
+              />
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
