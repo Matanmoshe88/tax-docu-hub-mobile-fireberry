@@ -62,17 +62,11 @@ export const PaymentPage = () => {
       }
     };
 
-    // 4. Handle focus (user comes back to tab/app)
-    const handleFocus = () => {
-      console.log('Page focused - refetching data');
-      setIsDrawerOpen(false);
-      refetch();
-    };
 
     // Add all event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pageshow', handlePageShow);
-    window.addEventListener('focus', handleFocus);
+
 
     // Cleanup
     return () => {
