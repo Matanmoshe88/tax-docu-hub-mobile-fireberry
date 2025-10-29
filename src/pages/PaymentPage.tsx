@@ -201,11 +201,11 @@ export const PaymentPage = () => {
 
       {/* Payment Drawer */}
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="h-[90vh] overflow-hidden">
+        <DrawerContent className="h-[90vh] flex flex-col">
           <DrawerHeader className="flex-shrink-0">
             <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 overflow-hidden relative min-h-0">
+          <div className="flex-1 relative" style={{ minHeight: 0, overflow: 'hidden' }}>
             {isIframeLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
                 <div className="flex gap-2">
@@ -222,6 +222,7 @@ export const PaymentPage = () => {
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
+                scrolling="no"
                 onLoad={() => setIsIframeLoading(false)}
               />
             )}
