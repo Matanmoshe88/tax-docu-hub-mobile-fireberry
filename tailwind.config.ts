@@ -135,6 +135,14 @@ export default {
 					'100%': { 
 						transform: 'rotate(360deg) translateX(60px) rotate(-360deg)' 
 					}
+				},
+				'dot-bounce': {
+					'0%, 80%, 100%': {
+						transform: 'translateY(0)'
+					},
+					'40%': {
+						transform: 'translateY(-12px)'
+					}
 				}
 			},
 			animation: {
@@ -146,7 +154,10 @@ export default {
 				'orbit-1': 'orbit 3s linear infinite',
 				'orbit-2': 'orbit 3s linear infinite 0.75s',
 				'orbit-3': 'orbit 3s linear infinite 1.5s',
-				'orbit-4': 'orbit 3s linear infinite 2.25s'
+				'orbit-4': 'orbit 3s linear infinite 2.25s',
+				'dot-bounce-1': 'dot-bounce 1.4s ease-in-out infinite',
+				'dot-bounce-2': 'dot-bounce 1.4s ease-in-out 0.2s infinite',
+				'dot-bounce-3': 'dot-bounce 1.4s ease-in-out 0.4s infinite'
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',

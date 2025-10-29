@@ -37,9 +37,11 @@ export const PaymentPage = () => {
   const { recordId } = useParams();
   const { paymentData, isLoading, error } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isIframeLoading, setIsIframeLoading] = useState(true);
 
   const handlePayment = () => {
     setIsDrawerOpen(true);
+    setIsIframeLoading(true);
   };
 
   if (isLoading) {
@@ -160,13 +162,23 @@ export const PaymentPage = () => {
           <DrawerHeader>
             <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
+            {isIframeLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-primary animate-dot-bounce-1"></div>
+                  <div className="w-3 h-3 rounded-full bg-secondary animate-dot-bounce-2"></div>
+                  <div className="w-3 h-3 rounded-full bg-warning animate-dot-bounce-3"></div>
+                </div>
+              </div>
+            )}
             {paymentData?.paymentUrl && (
               <iframe
                 src={paymentData.paymentUrl}
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
+                onLoad={() => setIsIframeLoading(false)}
               />
             )}
           </div>
