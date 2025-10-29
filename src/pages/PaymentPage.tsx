@@ -17,6 +17,8 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 
+import { useWhatsappBrowser } from "@/hooks/useWhatsappBrowser";
+
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('he-IL', {
     style: 'currency',
@@ -44,6 +46,7 @@ export const PaymentPage = () => {
   const [iframeKey, setIframeKey] = useState(Date.now());
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [dynamicPaymentUrl, setDynamicPaymentUrl] = useState<string | null>(null);
+  const isWhatsapp = useWhatsappBrowser();
 
   // ===== CRITICAL: Cache-busting and fresh load logic =====
   useEffect(() => {
@@ -248,11 +251,14 @@ export const PaymentPage = () => {
 
       {/* Payment Drawer */}
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="h-[90vh] flex flex-col overflow-auto" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+        <DrawerContent className="h-[90vh] flex flex-col">
           <DrawerHeader className="flex-shrink-0">
             <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
           </DrawerHeader>
-          <div className="relative">
+          <div
+            className={`flex-1 relative ${isWhatsapp ? "overflow-hidden" : "overflow-auto"}`}
+            style={{ minHeight: 0, WebkitOverflowScrolling: isWhatsapp ? undefined : "touch", overscrollBehavior: "contain" }}
+          >
             {isIframeLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
                 <div className="flex gap-2">
@@ -266,15 +272,10 @@ export const PaymentPage = () => {
               <iframe
                 key={iframeKey} // Force new iframe on key change
                 src={freshPaymentUrl} // URL with cache-busting timestamp
-                className="w-full border-0 block"
-                style={{ 
-                  height: 'auto',
-                  minHeight: '1800px',
-                  position: 'relative'
-                }}
+                className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
-                scrolling="yes"
+                scrolling={isWhatsapp ? "yes" : "no"}
                 onLoad={() => setIsIframeLoading(false)}
               />
             )}
