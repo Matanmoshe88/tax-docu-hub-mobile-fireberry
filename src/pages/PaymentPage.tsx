@@ -41,20 +41,7 @@ export const PaymentPage = () => {
   const [iframeKey, setIframeKey] = useState(Date.now());
 
   useEffect(() => {
-    // 1. One-time URL cache-busting for in-app browsers (especially WhatsApp)
-    const isInApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Line|Twitter|TikTok|Snapchat|Telegram/i.test(navigator.userAgent);
-    
-    if (isInApp) {
-      const url = new URL(window.location.href);
-      if (!url.searchParams.has('_t')) {
-        console.log('[Cache-Bust] Adding timestamp to URL for in-app browser');
-        url.searchParams.set('_t', Date.now().toString());
-        window.location.replace(url.toString());
-        return; // Page will reload with new URL
-      }
-    }
-
-    // 2. Handle visibility change (user returns to app from background)
+    // 1. Handle visibility change (user returns to app from background)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('[Cache-Bust] Page visible - closing drawer and refetching');
@@ -65,7 +52,8 @@ export const PaymentPage = () => {
       }
     };
 
-    // 3. Handle page restoration from bfcache (back-forward cache)
+    // 2. Handle page restoration from bfcache (back-forward cache)
+
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
         console.log('[Cache-Bust] Page restored from bfcache - forcing reload');
@@ -73,7 +61,7 @@ export const PaymentPage = () => {
       }
     };
 
-    // 4. Handle focus (user returns to tab/window)
+    // 3. Handle focus (user returns to tab/window)
     const handleFocus = () => {
       console.log('[Cache-Bust] Page focused - closing drawer and refetching');
       setIsDrawerOpen(false);
