@@ -48,18 +48,8 @@ serve(async (req) => {
       }
     );
 
-    const contentType = response.headers.get('content-type');
-    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Fireberry API error response:', errorText);
-      throw new Error(`Fireberry API error: ${response.status} - ${errorText.substring(0, 200)}`);
-    }
-
-    if (!contentType || !contentType.includes('application/json')) {
-      const responseText = await response.text();
-      console.error('Fireberry API returned non-JSON response:', responseText.substring(0, 500));
-      throw new Error('Fireberry API returned invalid response format');
+      throw new Error(`Fireberry API error: ${response.status}`);
     }
 
     const fireberryData = await response.json() as FireberryResponse;

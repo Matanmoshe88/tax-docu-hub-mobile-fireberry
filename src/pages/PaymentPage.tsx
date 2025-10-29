@@ -43,7 +43,7 @@ export const PaymentPage = () => {
   // ===== CRITICAL: Cache-busting and fresh load logic =====
   useEffect(() => {
     // 1. One-time URL cache-busting for WhatsApp browser
-
+    
 
     // 2. Handle visibility change (user returns to app)
     const handleVisibilityChange = () => {
