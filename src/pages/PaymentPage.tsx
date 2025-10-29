@@ -41,26 +41,57 @@ export const PaymentPage = () => {
 
   // Force a true fresh load once per open (works in in-app browsers like WhatsApp)
   useEffect(() => {
-    // Clear session storage to drop any old flags or cached state
-    sessionStorage.clear();
+    let lastReload = 0;
+    const GUARD_MS = 1500;
 
-    // Hard reload once by appending a unique __fresh param
+    const forceReload = () => {
+      const now = Date.now();
+      if (now - lastReload < GUARD_MS) return;
+      lastReload = now;
+      const next = new URL(window.location.href);
+      next.searchParams.set('__fresh', String(now));
+      sessionStorage.setItem('__fresh_last', String(now));
+      window.location.replace(next.toString());
+    };
+
     const url = new URL(window.location.href);
-    if (!url.searchParams.has('__fresh')) {
-      url.searchParams.set('__fresh', Date.now().toString());
-      window.location.replace(url.toString());
+    const currentFresh = url.searchParams.get('__fresh');
+    const lastFresh = sessionStorage.getItem('__fresh_last') || '';
+
+    const navEntries = performance.getEntriesByType('navigation') as any;
+    const navType = navEntries && navEntries[0] ? navEntries[0].type : undefined;
+
+    // On first open (true navigation) with no __fresh param — append and hard reload
+    if (navType === 'navigate' && !currentFresh) {
+      forceReload();
       return;
     }
 
-    // If the page was restored from bfcache, force a reload
-    const onPageShow = (event: PageTransitionEvent) => {
-      // @ts-ignore - persisted exists on event in browsers
-      if ((event as any).persisted) {
-        window.location.reload();
+    // If missing or stale __fresh — hard reload
+    if (!currentFresh || currentFresh !== lastFresh) {
+      forceReload();
+      return;
+    }
+
+    // If page restored from bfcache or becomes visible again — guarded hard reload
+    const onPageShow = (event: any) => {
+      if (event && event.persisted) {
+        forceReload();
       }
     };
-    window.addEventListener('pageshow', onPageShow as any);
-    return () => window.removeEventListener('pageshow', onPageShow as any);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        forceReload();
+      }
+    };
+
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   const isInApp = /WhatsApp|FB_IAB|FBAN|FBAV|Instagram|Line|Twitter|TikTok|Snapchat|Telegram/i.test(navigator.userAgent);
