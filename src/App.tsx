@@ -26,15 +26,14 @@ const App = () => (
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/" element={<HomePage />} />
-          <Route path="/:recordId" element={<HomePage />} />
           <Route path="/contract/:recordId" element={<ContractPage />} />
-          
           <Route path="/signature/:recordId" element={<SignaturePage />} />
           <Route path="/documents/:recordId" element={<DocumentsPage />} />
           <Route path="/payment/:recordId" element={<PaymentPage />} />
           <Route path="/payment-success/:recordId" element={<PaymentSuccessPage />} />
           <Route path="/payment-failed/:recordId" element={<PaymentFailedPage />} />
           <Route path="/finish/:recordId" element={<FinishPage />} />
+          <Route path="/:recordId" element={<HomePage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
