@@ -252,7 +252,7 @@ export const PaymentPage = () => {
           <DrawerHeader className="flex-shrink-0">
             <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 relative overflow-auto" style={{ minHeight: 0 }}>
+          <div className="flex-1 relative overflow-auto" style={{ minHeight: 0, WebkitOverflowScrolling: 'touch' }}>
             {isIframeLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
                 <div className="flex gap-2">
@@ -266,7 +266,8 @@ export const PaymentPage = () => {
               <iframe
                 key={iframeKey} // Force new iframe on key change
                 src={freshPaymentUrl} // URL with cache-busting timestamp
-                className="w-full h-full border-0"
+                className="w-full border-0"
+                style={{ height: '100%', minHeight: '600px' }}
                 title="CardCom Payment"
                 allow="payment"
                 scrolling="yes"
