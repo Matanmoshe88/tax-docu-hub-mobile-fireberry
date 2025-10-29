@@ -39,46 +39,60 @@ export const PaymentPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
 
-  // Clear all caches and session storage on mount to ensure fresh data
+  // Force a true fresh load once per open (works in in-app browsers like WhatsApp)
   useEffect(() => {
-    // Clear session storage related to this page
+    // Clear session storage to drop any old flags or cached state
     sessionStorage.clear();
-    
-    // Add cache-busting to current URL if not already present
+
+    // Hard reload once by appending a unique __fresh param
     const url = new URL(window.location.href);
-    const currentTimestamp = url.searchParams.get('_nocache');
-    const newTimestamp = Date.now().toString();
-    
-    if (currentTimestamp !== newTimestamp) {
-      url.searchParams.set('_nocache', newTimestamp);
-      window.history.replaceState({}, '', url.toString());
+    if (!url.searchParams.has('__fresh')) {
+      url.searchParams.set('__fresh', Date.now().toString());
+      window.location.replace(url.toString());
+      return;
     }
 
-    // Disable back-forward cache (bfcache) in all browsers
-    window.addEventListener('pageshow', (event) => {
-      if (event.persisted) {
+    // If the page was restored from bfcache, force a reload
+    const onPageShow = (event: PageTransitionEvent) => {
+      // @ts-ignore - persisted exists on event in browsers
+      if ((event as any).persisted) {
         window.location.reload();
       }
-    });
+    };
+    window.addEventListener('pageshow', onPageShow as any);
+    return () => window.removeEventListener('pageshow', onPageShow as any);
   }, []);
+
+  const isInApp = /WhatsApp|FB_IAB|FBAN|FBAV|Instagram|Line|Twitter|TikTok|Snapchat|Telegram/i.test(navigator.userAgent);
 
   const handlePayment = () => {
     if (!paymentData?.paymentUrl) return;
-    
+
     // Add cache-busting timestamp to payment URL
     const url = paymentData.paymentUrl;
-    const cacheBuster = `${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
-    const freshUrl = url + cacheBuster;
-    
+    const freshUrl = `${url}${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
+
+    // Open externally in in-app browsers to avoid restoring CardCom on next open
+    if (isInApp) {
+      const win = window.open(freshUrl, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        // Fallback to in-app drawer if popup blocked
+        setIsDrawerOpen(true);
+        setIsIframeLoading(true);
+        setTimeout(() => {
+          const iframe = document.querySelector('iframe[title="CardCom Payment"]') as HTMLIFrameElement | null;
+          if (iframe) iframe.src = freshUrl;
+        }, 100);
+      }
+      return;
+    }
+
+    // Default: open in drawer iframe
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
-    
-    // Update iframe src with fresh URL
     setTimeout(() => {
-      const iframe = document.querySelector('iframe[title="CardCom Payment"]') as HTMLIFrameElement;
-      if (iframe) {
-        iframe.src = freshUrl;
-      }
+      const iframe = document.querySelector('iframe[title="CardCom Payment"]') as HTMLIFrameElement | null;
+      if (iframe) iframe.src = freshUrl;
     }, 100);
   };
 
@@ -185,7 +199,8 @@ export const PaymentPage = () => {
       ) : (
         <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
           <Button
-            onClick={handlePayment}
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePayment(); }}
             className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
           >
             <ShieldCheck className="w-5 h-5" />
