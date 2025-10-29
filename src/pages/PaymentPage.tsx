@@ -35,7 +35,7 @@ const formatDate = (dateString: string): string => {
 
 export const PaymentPage = () => {
   const [searchParams] = useSearchParams();
-  const recordId = searchParams.get('recordId');
+  const recordId = searchParams.get('recordid');
   const { paymentData, isLoading, error } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
