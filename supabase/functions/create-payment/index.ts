@@ -113,7 +113,13 @@ serve(async (req) => {
 
     // Step 3: Update Fireberry record with CardCom details
     console.log('Updating Fireberry record with payment details...');
-    const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'); // YYYY-MM-DDTHH:mm:ssZ
+    
+    // Convert to Israel time (UTC+2 or UTC+3 depending on DST)
+    const now = new Date();
+    const israelTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
+    const timestamp = israelTime.toISOString().replace(/\.\d{3}Z$/, 'Z'); // YYYY-MM-DDTHH:mm:ssZ
+    
+    console.log('Israel timestamp:', timestamp);
     
     const updatePayload = {
       pcfsystemfield838: cardcomData.Url,
