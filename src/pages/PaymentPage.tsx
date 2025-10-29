@@ -75,6 +75,28 @@ export const PaymentPage = () => {
     };
   }, [refetch]);
 
+  // Lock body scroll when drawer is open (fixes WhatsApp in-app browser)
+  useEffect(() => {
+    if (isDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+    };
+  }, [isDrawerOpen]);
+
   const handlePayment = () => {
     if (!paymentData?.paymentUrl) return;
     
@@ -207,7 +229,7 @@ export const PaymentPage = () => {
           </DrawerHeader>
           <div className="flex-1 overflow-hidden relative min-h-0">
             {isIframeLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+              <div className="absolute inset-0 flex items-center justify-center bg-background z-10 touch-none">
                 <div className="flex gap-2">
                   <div className="w-3 h-3 rounded-full bg-brand-blue animate-dot-bounce-1"></div>
                   <div className="w-3 h-3 rounded-full bg-brand-green animate-dot-bounce-2"></div>
@@ -219,7 +241,8 @@ export const PaymentPage = () => {
               <iframe
                 key={iframeKey} // Force new iframe on key change
                 src={freshPaymentUrl} // URL with cache-busting timestamp
-                className="w-full h-full border-0"
+                className="w-full h-full border-0 touch-none"
+                style={{ touchAction: 'none', overscrollBehavior: 'none' }}
                 title="CardCom Payment"
                 allow="payment"
                 onLoad={() => setIsIframeLoading(false)}
