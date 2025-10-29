@@ -21,7 +21,7 @@ interface FireberryRecord {
 }
 
 interface CardComResponse {
-  ResponseCode: string;
+  ResponseCode: string | number;
   Url?: string;
   LowProfileId?: string;
   Description?: string;
@@ -105,7 +105,8 @@ serve(async (req) => {
     const cardcomData: CardComResponse = await cardcomResponse.json();
     console.log('CardCom response:', JSON.stringify(cardcomData, null, 2));
 
-    if (!cardcomResponse.ok || cardcomData.ResponseCode !== '0') {
+    // ResponseCode is a number, 0 = success
+    if (!cardcomResponse.ok || (cardcomData.ResponseCode !== '0' && cardcomData.ResponseCode !== 0)) {
       console.error('CardCom error:', cardcomData.Description || cardcomData.ResponseCode);
       throw new Error('CardCom payment creation failed');
     }
