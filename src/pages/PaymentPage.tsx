@@ -48,42 +48,29 @@ export const PaymentPage = () => {
   // Detect in-app browser (WhatsApp, Facebook, Instagram)
   const isInApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.userAgent);
 
-  // One-time cache-busting URL param for in-app browsers (non-reloading)
-  useEffect(() => {
-    if (!isInApp) return;
-    const appliedKey = `t_applied_${recordId ?? ''}`;
-    if (sessionStorage.getItem(appliedKey)) return;
-    const url = new URL(window.location.href);
-    if (!url.searchParams.has('t')) {
-      url.searchParams.set('t', Date.now().toString());
-      window.history.replaceState(null, '', url.toString());
-    }
-    sessionStorage.setItem(appliedKey, '1');
-  }, [isInApp, recordId]);
-
   // Auto-refetch on visibility/focus/pageshow (queue refetch if drawer is open)
   useEffect(() => {
     const onVisible = () => { 
       if (document.visibilityState !== 'visible') return;
       if (isDrawerOpen) {
         refetchQueuedRef.current = true;
-      } else {
-        refetch();
+        return;
       }
+      refetch();
     };
     const onFocus = () => {
       if (isDrawerOpen) {
         refetchQueuedRef.current = true;
-      } else {
-        refetch();
+        return;
       }
+      refetch();
     };
     const onPageShow = () => {
       if (isDrawerOpen) {
         refetchQueuedRef.current = true;
-      } else {
-        refetch();
+        return;
       }
+      refetch();
     };
     
     document.addEventListener('visibilitychange', onVisible);
@@ -95,7 +82,7 @@ export const PaymentPage = () => {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [refetch, isDrawerOpen]);
+  }, [isDrawerOpen, refetch]);
 
   // Optional: Light polling for in-app browsers (every 30s)
   useEffect(() => {
@@ -104,12 +91,31 @@ export const PaymentPage = () => {
     return () => clearInterval(id);
   }, [isInApp, refetch]);
 
-  const handlePayment = () => {
-    if (paymentData?.paymentUrl) {
-      const url = paymentData.paymentUrl;
-      const withTs = `${url}${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
-      setDrawerPaymentUrl(withTs);
+  const handlePayment = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    
+    if (!paymentData?.paymentUrl) return;
+    
+    const url = paymentData.paymentUrl;
+    const withTs = `${url}${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
+    
+    // For in-app browsers, open payment in external browser
+    if (isInApp) {
+      sessionStorage.setItem('payment_in_progress', '1');
+      const win = window.open(withTs, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        // Fallback: show link in drawer if popup blocked
+        setDrawerPaymentUrl(withTs);
+        setIsDrawerOpen(true);
+      }
+      return;
+    }
+    
+    // Default: use iframe drawer for normal browsers
+    setDrawerPaymentUrl(withTs);
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
   };
@@ -218,7 +224,7 @@ export const PaymentPage = () => {
         <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
           <Button
             type="button"
-            onClick={handlePayment}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePayment(e); }}
             className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
           >
             <ShieldCheck className="w-5 h-5" />
@@ -233,8 +239,9 @@ export const PaymentPage = () => {
         onOpenChange={(open) => {
           setIsDrawerOpen(open);
           if (!open) {
-            // Refetch when drawer closes (also handles any queued refresh)
+            // Refetch when drawer closes and clear flags
             refetchQueuedRef.current = false;
+            sessionStorage.removeItem('payment_in_progress');
             refetch();
           }
         }}
