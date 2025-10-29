@@ -1,5 +1,5 @@
-import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -34,10 +34,54 @@ const formatDate = (dateString: string): string => {
 };
 
 export const PaymentPage = () => {
-  const { recordId } = useParams();
-  const { paymentData, isLoading, error } = usePaymentData(recordId);
+  const { recordId: pathId } = useParams();
+  const [searchParams] = useSearchParams();
+  const queryId = searchParams.get('recordid') || undefined;
+  const recordId = pathId || queryId;
+  
+  const { paymentData, isLoading, error, refetch } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
+
+  // Detect in-app browser (WhatsApp, Facebook, Instagram)
+  const isInApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.userAgent);
+
+  // One-time cache-busting URL param for in-app browsers
+  useEffect(() => {
+    if (isInApp) {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('t')) {
+        url.searchParams.set('t', Date.now().toString());
+        window.location.replace(url.toString());
+      }
+    }
+  }, [isInApp]);
+
+  // Auto-refetch on visibility/focus/pageshow
+  useEffect(() => {
+    const onVisible = () => { 
+      if (document.visibilityState === 'visible') refetch(); 
+    };
+    const onFocus = () => refetch();
+    const onPageShow = () => refetch();
+    
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('pageshow', onPageShow);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [refetch]);
+
+  // Optional: Light polling for in-app browsers (every 30s)
+  useEffect(() => {
+    if (!isInApp) return;
+    const id = setInterval(refetch, 30000);
+    return () => clearInterval(id);
+  }, [isInApp, refetch]);
 
   const handlePayment = () => {
     setIsDrawerOpen(true);
