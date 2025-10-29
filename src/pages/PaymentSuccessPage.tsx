@@ -33,7 +33,7 @@ export const PaymentSuccessPage = () => {
           </div>
 
           {/* Success Messages */}
-          <div className="text-center space-y-3 md:space-y-4 mb-8">
+          <div className="text-center space-y-3 md:space-y-4">
             <h1 className="text-2xl md:text-3xl font-bold text-success">
               התשלום בוצע בהצלחה!
             </h1>
@@ -50,16 +50,6 @@ export const PaymentSuccessPage = () => {
               באהבה צוות קוויק טקס ❤️
             </p>
           </div>
-
-          {/* Continue Button */}
-          <Button
-            onClick={handleContinue}
-            className="w-full"
-            variant="success"
-            size="lg"
-          >
-            המשך
-          </Button>
         </CardContent>
       </Card>
     </div>
