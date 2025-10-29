@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -35,69 +35,11 @@ const formatDate = (dateString: string): string => {
 
 export const PaymentPage = () => {
   const { recordId } = useParams();
-  const { paymentData, isLoading, error, refetch } = usePaymentData(recordId);
+  const { paymentData, isLoading, error } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
-  const [iframeKey, setIframeKey] = useState(Date.now());
-
-  // ===== CRITICAL: Cache-busting and fresh load logic =====
-  useEffect(() => {
-    // 1. One-time URL cache-busting for WhatsApp browser
-    const isInApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Line|Twitter|TikTok|Snapchat|Telegram/i.test(navigator.userAgent);
-    
-    if (isInApp) {
-      const url = new URL(window.location.href);
-      if (!url.searchParams.has('_t')) {
-        // Add unique timestamp to force fresh load in WhatsApp
-        url.searchParams.set('_t', Date.now().toString());
-        window.location.replace(url.toString());
-        return; // Stop execution, page will reload
-      }
-    }
-
-    // 2. Handle visibility change (user returns to app)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Page became visible - refetching data and closing drawer');
-        setIsDrawerOpen(false); // Close drawer
-        setIsIframeLoading(true); // Reset iframe loading
-        refetch(); // Fetch fresh payment data
-      }
-    };
-
-    // 3. Handle page restore from bfcache (back-forward cache)
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        console.log('Page restored from bfcache - reloading');
-        window.location.reload(); // Force full reload
-      }
-    };
-
-    // 4. Handle focus (user comes back to tab/app)
-    const handleFocus = () => {
-      console.log('Page focused - refetching data');
-      setIsDrawerOpen(false);
-      refetch();
-    };
-
-    // Add all event listeners
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pageshow', handlePageShow);
-    window.addEventListener('focus', handleFocus);
-
-    // Cleanup
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pageshow', handlePageShow);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [refetch]);
 
   const handlePayment = () => {
-    if (!paymentData?.paymentUrl) return;
-    
-    // Generate fresh iframe with new key to force reload
-    setIframeKey(Date.now());
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
   };
@@ -117,9 +59,6 @@ export const PaymentPage = () => {
   }
 
   const isPaid = paymentData.paymentStatus !== 1;
-
-  // Add cache-busting timestamp to payment URL
-  const freshPaymentUrl = `${paymentData.paymentUrl}${paymentData.paymentUrl.includes('?') ? '&' : '?'}ts=${iframeKey}`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative" dir="rtl">
@@ -235,8 +174,7 @@ export const PaymentPage = () => {
             )}
             {paymentData?.paymentUrl && (
               <iframe
-                key={iframeKey} // Force new iframe on key change
-                src={freshPaymentUrl} // URL with cache-busting timestamp
+                src={paymentData.paymentUrl}
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
