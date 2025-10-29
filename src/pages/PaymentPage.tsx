@@ -1,5 +1,5 @@
-import { useParams, useSearchParams } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -34,88 +34,12 @@ const formatDate = (dateString: string): string => {
 };
 
 export const PaymentPage = () => {
-  const { recordId: pathId } = useParams();
-  const [searchParams] = useSearchParams();
-  const queryId = searchParams.get('recordid') || undefined;
-  const recordId = pathId || queryId;
-  
-  const { paymentData, isLoading, error, refetch } = usePaymentData(recordId);
+  const { recordId } = useParams();
+  const { paymentData, isLoading, error } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
-  const [drawerPaymentUrl, setDrawerPaymentUrl] = useState<string | null>(null);
-  const refetchQueuedRef = useRef(false);
 
-  // Detect in-app browser (WhatsApp, Facebook, Instagram)
-  const isInApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.userAgent);
-
-  // Auto-refetch on visibility/focus/pageshow (queue refetch if drawer is open)
-  useEffect(() => {
-    const onVisible = () => { 
-      if (document.visibilityState !== 'visible') return;
-      if (isDrawerOpen) {
-        refetchQueuedRef.current = true;
-        return;
-      }
-      refetch();
-    };
-    const onFocus = () => {
-      if (isDrawerOpen) {
-        refetchQueuedRef.current = true;
-        return;
-      }
-      refetch();
-    };
-    const onPageShow = () => {
-      if (isDrawerOpen) {
-        refetchQueuedRef.current = true;
-        return;
-      }
-      refetch();
-    };
-    
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('pageshow', onPageShow);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('pageshow', onPageShow);
-    };
-  }, [isDrawerOpen, refetch]);
-
-  // Optional: Light polling for in-app browsers (every 30s)
-  useEffect(() => {
-    if (!isInApp) return;
-    const id = setInterval(refetch, 30000);
-    return () => clearInterval(id);
-  }, [isInApp, refetch]);
-
-  const handlePayment = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
-    if (!paymentData?.paymentUrl) return;
-    
-    const url = paymentData.paymentUrl;
-    const withTs = `${url}${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
-    
-    // For in-app browsers, open payment in external browser
-    if (isInApp) {
-      sessionStorage.setItem('payment_in_progress', '1');
-      const win = window.open(withTs, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        // Fallback: show link in drawer if popup blocked
-        setDrawerPaymentUrl(withTs);
-        setIsDrawerOpen(true);
-      }
-      return;
-    }
-    
-    // Default: use iframe drawer for normal browsers
-    setDrawerPaymentUrl(withTs);
+  const handlePayment = () => {
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
   };
@@ -223,8 +147,7 @@ export const PaymentPage = () => {
       ) : (
         <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
           <Button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePayment(e); }}
+            onClick={handlePayment}
             className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
           >
             <ShieldCheck className="w-5 h-5" />
@@ -234,18 +157,7 @@ export const PaymentPage = () => {
       )}
 
       {/* Payment Drawer */}
-      <Drawer 
-        open={isDrawerOpen} 
-        onOpenChange={(open) => {
-          setIsDrawerOpen(open);
-          if (!open) {
-            // Refetch when drawer closes and clear flags
-            refetchQueuedRef.current = false;
-            sessionStorage.removeItem('payment_in_progress');
-            refetch();
-          }
-        }}
-      >
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <DrawerContent className="h-[90vh]">
           <DrawerHeader>
             <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
@@ -260,9 +172,9 @@ export const PaymentPage = () => {
                 </div>
               </div>
             )}
-            {drawerPaymentUrl && (
+            {paymentData?.paymentUrl && (
               <iframe
-                src={drawerPaymentUrl}
+                src={paymentData.paymentUrl}
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
