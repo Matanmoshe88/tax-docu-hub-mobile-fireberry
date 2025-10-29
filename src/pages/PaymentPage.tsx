@@ -57,13 +57,17 @@ export const PaymentPage = () => {
     }
   }, [isInApp]);
 
-  // Auto-refetch on visibility/focus/pageshow
+  // Auto-refetch on visibility/focus/pageshow (but not when drawer is open)
   useEffect(() => {
     const onVisible = () => { 
-      if (document.visibilityState === 'visible') refetch(); 
+      if (document.visibilityState === 'visible' && !isDrawerOpen) refetch(); 
     };
-    const onFocus = () => refetch();
-    const onPageShow = () => refetch();
+    const onFocus = () => {
+      if (!isDrawerOpen) refetch();
+    };
+    const onPageShow = () => {
+      if (!isDrawerOpen) refetch();
+    };
     
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onFocus);
@@ -74,7 +78,7 @@ export const PaymentPage = () => {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [refetch]);
+  }, [refetch, isDrawerOpen]);
 
   // Optional: Light polling for in-app browsers (every 30s)
   useEffect(() => {
