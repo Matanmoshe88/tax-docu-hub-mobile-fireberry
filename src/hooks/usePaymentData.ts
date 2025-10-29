@@ -30,7 +30,10 @@ export const usePaymentData = (recordId: string | undefined) => {
         setError(null);
 
         const { data, error: functionError } = await supabase.functions.invoke('payment-data', {
-          body: { recordId },
+          body: { 
+            recordId,
+            _t: Date.now() // Cache-busting timestamp
+          },
         });
 
         if (functionError) {
