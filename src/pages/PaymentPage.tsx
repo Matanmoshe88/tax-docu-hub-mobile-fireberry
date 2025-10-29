@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -39,92 +39,9 @@ export const PaymentPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
 
-  // Force a true fresh load once per open (works in in-app browsers like WhatsApp)
-  useEffect(() => {
-    let lastReload = 0;
-    const GUARD_MS = 1500;
-
-    const forceReload = () => {
-      const now = Date.now();
-      if (now - lastReload < GUARD_MS) return;
-      lastReload = now;
-      const next = new URL(window.location.href);
-      next.searchParams.set('__fresh', String(now));
-      sessionStorage.setItem('__fresh_last', String(now));
-      window.location.replace(next.toString());
-    };
-
-    const url = new URL(window.location.href);
-    const currentFresh = url.searchParams.get('__fresh');
-    const lastFresh = sessionStorage.getItem('__fresh_last') || '';
-
-    const navEntries = performance.getEntriesByType('navigation') as any;
-    const navType = navEntries && navEntries[0] ? navEntries[0].type : undefined;
-
-    // On first open (true navigation) with no __fresh param — append and hard reload
-    if (navType === 'navigate' && !currentFresh) {
-      forceReload();
-      return;
-    }
-
-    // If missing or stale __fresh — hard reload
-    if (!currentFresh || currentFresh !== lastFresh) {
-      forceReload();
-      return;
-    }
-
-    // If page restored from bfcache or becomes visible again — guarded hard reload
-    const onPageShow = (event: any) => {
-      if (event && event.persisted) {
-        forceReload();
-      }
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        forceReload();
-      }
-    };
-
-    window.addEventListener('pageshow', onPageShow);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.removeEventListener('pageshow', onPageShow);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, []);
-
-  const isInApp = /WhatsApp|FB_IAB|FBAN|FBAV|Instagram|Line|Twitter|TikTok|Snapchat|Telegram/i.test(navigator.userAgent);
-
   const handlePayment = () => {
-    if (!paymentData?.paymentUrl) return;
-
-    // Add cache-busting timestamp to payment URL
-    const url = paymentData.paymentUrl;
-    const freshUrl = `${url}${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
-
-    // Open externally in in-app browsers to avoid restoring CardCom on next open
-    if (isInApp) {
-      const win = window.open(freshUrl, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        // Fallback to in-app drawer if popup blocked
-        setIsDrawerOpen(true);
-        setIsIframeLoading(true);
-        setTimeout(() => {
-          const iframe = document.querySelector('iframe[title="CardCom Payment"]') as HTMLIFrameElement | null;
-          if (iframe) iframe.src = freshUrl;
-        }, 100);
-      }
-      return;
-    }
-
-    // Default: open in drawer iframe
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
-    setTimeout(() => {
-      const iframe = document.querySelector('iframe[title="CardCom Payment"]') as HTMLIFrameElement | null;
-      if (iframe) iframe.src = freshUrl;
-    }, 100);
   };
 
   if (isLoading) {
@@ -230,8 +147,7 @@ export const PaymentPage = () => {
       ) : (
         <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
           <Button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePayment(); }}
+            onClick={handlePayment}
             className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
           >
             <ShieldCheck className="w-5 h-5" />
@@ -258,12 +174,11 @@ export const PaymentPage = () => {
             )}
             {paymentData?.paymentUrl && (
               <iframe
-                src={`${paymentData.paymentUrl}${paymentData.paymentUrl.includes('?') ? '&' : '?'}ts=${Date.now()}`}
+                src={paymentData.paymentUrl}
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
                 onLoad={() => setIsIframeLoading(false)}
-                key={Date.now()}
               />
             )}
           </div>
