@@ -40,44 +40,43 @@ export const PaymentPage = () => {
   const [isIframeLoading, setIsIframeLoading] = useState(true);
   const [iframeKey, setIframeKey] = useState(Date.now());
 
+  // ===== CRITICAL: Cache-busting and fresh load logic =====
   useEffect(() => {
-    // 1. Handle visibility change (user returns to app from background)
+    // 1. One-time URL cache-busting for WhatsApp browser
+    
+
+    // 2. Handle visibility change (user returns to app)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[Cache-Bust] Page visible - closing drawer and refetching');
-        setIsDrawerOpen(false); // Close drawer to show main page
-        setIsIframeLoading(true); // Reset loading state
-        setIframeKey(Date.now()); // New iframe when drawer reopens
-        refetch(); // Fetch fresh data
+        console.log('Page became visible - refetching data and closing drawer');
+        setIsDrawerOpen(false); // Close drawer
+        setIsIframeLoading(true); // Reset iframe loading
+        refetch(); // Fetch fresh payment data
       }
     };
 
-    // 2. Handle page restoration from bfcache (back-forward cache)
-
+    // 3. Handle page restore from bfcache (back-forward cache)
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
-        console.log('[Cache-Bust] Page restored from bfcache - forcing reload');
-        window.location.reload();
+        console.log('Page restored from bfcache - reloading');
+        window.location.reload(); // Force full reload
       }
     };
 
-    // 3. Handle focus (user returns to tab/window)
+    // 4. Handle focus (user comes back to tab/app)
     const handleFocus = () => {
-      console.log('[Cache-Bust] Page focused - closing drawer and refetching');
+      console.log('Page focused - refetching data');
       setIsDrawerOpen(false);
-      setIframeKey(Date.now());
       refetch();
     };
 
-    // Register all event listeners
-    console.log('[Cache-Bust] Registering event listeners');
+    // Add all event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('focus', handleFocus);
 
     // Cleanup
     return () => {
-      console.log('[Cache-Bust] Cleaning up event listeners');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pageshow', handlePageShow);
       window.removeEventListener('focus', handleFocus);
@@ -85,8 +84,10 @@ export const PaymentPage = () => {
   }, [refetch]);
 
   const handlePayment = () => {
-    console.log('[Cache-Bust] Opening drawer with fresh iframe');
-    setIframeKey(Date.now()); // Generate new key
+    if (!paymentData?.paymentUrl) return;
+    
+    // Generate fresh iframe with new key to force reload
+    setIframeKey(Date.now());
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
   };
@@ -106,6 +107,9 @@ export const PaymentPage = () => {
   }
 
   const isPaid = paymentData.paymentStatus !== 1;
+
+  // Add cache-busting timestamp to payment URL
+  const freshPaymentUrl = `${paymentData.paymentUrl}${paymentData.paymentUrl.includes('?') ? '&' : '?'}ts=${iframeKey}`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative" dir="rtl">
@@ -221,8 +225,8 @@ export const PaymentPage = () => {
             )}
             {paymentData?.paymentUrl && (
               <iframe
-                key={iframeKey}
-                src={`${paymentData.paymentUrl}${paymentData.paymentUrl.includes('?') ? '&' : '?'}ts=${iframeKey}`}
+                key={iframeKey} // Force new iframe on key change
+                src={freshPaymentUrl} // URL with cache-busting timestamp
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
