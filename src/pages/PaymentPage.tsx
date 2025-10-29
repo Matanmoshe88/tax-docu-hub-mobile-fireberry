@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -35,11 +35,67 @@ const formatDate = (dateString: string): string => {
 
 export const PaymentPage = () => {
   const { recordId } = useParams();
-  const { paymentData, isLoading, error } = usePaymentData(recordId);
+  const { paymentData, isLoading, error, refetch } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
+  const [iframeKey, setIframeKey] = useState(Date.now());
+
+  useEffect(() => {
+    // 1. One-time URL cache-busting for in-app browsers (especially WhatsApp)
+    const isInApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram|Line|Twitter|TikTok|Snapchat|Telegram/i.test(navigator.userAgent);
+    
+    if (isInApp) {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('_t')) {
+        console.log('Adding cache-busting parameter for in-app browser');
+        url.searchParams.set('_t', Date.now().toString());
+        window.location.replace(url.toString());
+        return; // Stop execution, page will reload with new URL
+      }
+    }
+
+    // 2. Handle visibility change (user returns to app from background)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Page became visible - refetching data and closing drawer');
+        setIsDrawerOpen(false); // Close drawer to show main page
+        setIsIframeLoading(true); // Reset iframe loading state
+        setIframeKey(Date.now()); // Force new iframe when drawer reopens
+        refetch(); // Fetch fresh payment data
+      }
+    };
+
+    // 3. Handle page restore from bfcache (back-forward cache)
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        console.log('Page restored from bfcache - forcing full reload');
+        window.location.reload();
+      }
+    };
+
+    // 4. Handle focus (user returns to tab/window)
+    const handleFocus = () => {
+      console.log('Page focused - refetching data and closing drawer');
+      setIsDrawerOpen(false);
+      setIframeKey(Date.now());
+      refetch();
+    };
+
+    // Register all event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
+    window.addEventListener('focus', handleFocus);
+
+    // Cleanup function to remove listeners
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refetch]);
 
   const handlePayment = () => {
+    setIframeKey(Date.now()); // Generate new key for fresh iframe
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
   };
@@ -174,7 +230,8 @@ export const PaymentPage = () => {
             )}
             {paymentData?.paymentUrl && (
               <iframe
-                src={paymentData.paymentUrl}
+                key={iframeKey}
+                src={`${paymentData.paymentUrl}${paymentData.paymentUrl.includes('?') ? '&' : '?'}ts=${iframeKey}`}
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PaymentData {
@@ -17,41 +17,50 @@ export const usePaymentData = (recordId: string | undefined) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchPaymentData = async () => {
-      if (!recordId) {
-        setError('No record ID provided');
-        setIsLoading(false);
-        return;
+  const refetch = useCallback(async () => {
+    if (!recordId) {
+      setError('No record ID provided');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      console.log('Fetching payment data for recordId:', recordId);
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error: functionError } = await supabase.functions.invoke('payment-data', {
+        body: { 
+          recordId,
+          _t: Date.now() // Cache-busting timestamp
+        },
+        headers: { 
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (functionError) {
+        console.error('Function error:', functionError);
+        throw functionError;
       }
 
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const { data, error: functionError } = await supabase.functions.invoke('payment-data', {
-          body: { recordId },
-        });
-
-        if (functionError) {
-          throw functionError;
-        }
-
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to fetch payment data');
-        }
-
-        setPaymentData(data.data);
-      } catch (err) {
-        console.error('Error fetching payment data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch payment data');
-      } finally {
-        setIsLoading(false);
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch payment data');
       }
-    };
 
-    fetchPaymentData();
+      setPaymentData(data.data);
+    } catch (err) {
+      console.error('Error fetching payment data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch payment data');
+    } finally {
+      setIsLoading(false);
+    }
   }, [recordId]);
 
-  return { paymentData, isLoading, error };
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { paymentData, isLoading, error, refetch };
 };
