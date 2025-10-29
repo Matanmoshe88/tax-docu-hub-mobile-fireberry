@@ -33,10 +33,6 @@ export const usePaymentData = (recordId: string | undefined) => {
         body: { 
           recordId,
           _t: Date.now() // Cache-busting timestamp
-        },
-        headers: { 
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
         }
       });
 
