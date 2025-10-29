@@ -9,7 +9,7 @@ export const PaymentFailedPage = () => {
   const { recordId } = useParams();
 
   const handleTryAgain = () => {
-    navigate(`/payment?recordId=${recordId}`);
+    navigate(`/payment/${recordId}`);
   };
 
   return (
