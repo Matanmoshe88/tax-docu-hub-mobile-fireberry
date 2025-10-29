@@ -72,7 +72,6 @@ export const PaymentPage = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pageshow', handlePageShow);
-      window.removeEventListener('focus', handleFocus);
     };
   }, [refetch]);
 
