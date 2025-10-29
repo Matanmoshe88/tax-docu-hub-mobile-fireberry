@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,8 @@ const formatDate = (dateString: string): string => {
 };
 
 export const PaymentPage = () => {
-  const { recordId } = useParams();
+  const [searchParams] = useSearchParams();
+  const recordId = searchParams.get('recordId');
   const { paymentData, isLoading, error } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);

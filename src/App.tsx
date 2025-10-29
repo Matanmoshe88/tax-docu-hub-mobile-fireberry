@@ -31,7 +31,7 @@ const App = () => (
           
           <Route path="/signature/:recordId" element={<SignaturePage />} />
           <Route path="/documents/:recordId" element={<DocumentsPage />} />
-          <Route path="/payment/:recordId" element={<PaymentPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-success/:recordId" element={<PaymentSuccessPage />} />
           <Route path="/payment-failed/:recordId" element={<PaymentFailedPage />} />
           <Route path="/finish/:recordId" element={<FinishPage />} />
