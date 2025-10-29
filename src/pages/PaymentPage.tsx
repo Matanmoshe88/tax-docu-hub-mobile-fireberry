@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -39,9 +39,47 @@ export const PaymentPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
 
+  // Clear all caches and session storage on mount to ensure fresh data
+  useEffect(() => {
+    // Clear session storage related to this page
+    sessionStorage.clear();
+    
+    // Add cache-busting to current URL if not already present
+    const url = new URL(window.location.href);
+    const currentTimestamp = url.searchParams.get('_nocache');
+    const newTimestamp = Date.now().toString();
+    
+    if (currentTimestamp !== newTimestamp) {
+      url.searchParams.set('_nocache', newTimestamp);
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    // Disable back-forward cache (bfcache) in all browsers
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+  }, []);
+
   const handlePayment = () => {
+    if (!paymentData?.paymentUrl) return;
+    
+    // Add cache-busting timestamp to payment URL
+    const url = paymentData.paymentUrl;
+    const cacheBuster = `${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
+    const freshUrl = url + cacheBuster;
+    
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
+    
+    // Update iframe src with fresh URL
+    setTimeout(() => {
+      const iframe = document.querySelector('iframe[title="CardCom Payment"]') as HTMLIFrameElement;
+      if (iframe) {
+        iframe.src = freshUrl;
+      }
+    }, 100);
   };
 
   if (isLoading) {
@@ -174,11 +212,12 @@ export const PaymentPage = () => {
             )}
             {paymentData?.paymentUrl && (
               <iframe
-                src={paymentData.paymentUrl}
+                src={`${paymentData.paymentUrl}${paymentData.paymentUrl.includes('?') ? '&' : '?'}ts=${Date.now()}`}
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
                 onLoad={() => setIsIframeLoading(false)}
+                key={Date.now()}
               />
             )}
           </div>
