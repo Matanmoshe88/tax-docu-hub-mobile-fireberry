@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 interface FireberryResponse {
@@ -70,7 +71,15 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ success: true, data: paymentData }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        } 
+      }
     );
   } catch (error) {
     console.error('Error fetching payment data:', error);
