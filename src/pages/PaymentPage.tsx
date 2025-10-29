@@ -17,6 +17,8 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 
+import { useWhatsappBrowser } from "@/hooks/useWhatsappBrowser";
+
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('he-IL', {
     style: 'currency',
@@ -44,6 +46,7 @@ export const PaymentPage = () => {
   const [iframeKey, setIframeKey] = useState(Date.now());
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [dynamicPaymentUrl, setDynamicPaymentUrl] = useState<string | null>(null);
+  const isWhatsapp = useWhatsappBrowser();
 
   // ===== CRITICAL: Cache-busting and fresh load logic =====
   useEffect(() => {
@@ -252,7 +255,10 @@ export const PaymentPage = () => {
           <DrawerHeader className="flex-shrink-0">
             <DrawerTitle className="text-center">תשלום מאובטח</DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 relative overflow-auto" style={{ minHeight: 0 }}>
+          <div
+            className={`flex-1 relative ${isWhatsapp ? "overflow-hidden" : "overflow-auto"}`}
+            style={{ minHeight: 0, WebkitOverflowScrolling: isWhatsapp ? undefined : "touch", overscrollBehavior: "contain" }}
+          >
             {isIframeLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
                 <div className="flex gap-2">
@@ -269,7 +275,7 @@ export const PaymentPage = () => {
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
-                scrolling="yes"
+                scrolling={isWhatsapp ? "yes" : "no"}
                 onLoad={() => setIsIframeLoading(false)}
               />
             )}
