@@ -1,5 +1,5 @@
 import { useParams, useSearchParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Lock } from "lucide-react";
@@ -42,30 +42,49 @@ export const PaymentPage = () => {
   const { paymentData, isLoading, error, refetch } = usePaymentData(recordId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isIframeLoading, setIsIframeLoading] = useState(true);
+  const [drawerPaymentUrl, setDrawerPaymentUrl] = useState<string | null>(null);
+  const refetchQueuedRef = useRef(false);
 
   // Detect in-app browser (WhatsApp, Facebook, Instagram)
   const isInApp = /WhatsApp|FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.userAgent);
 
-  // One-time cache-busting URL param for in-app browsers
+  // One-time cache-busting URL param for in-app browsers (non-reloading)
   useEffect(() => {
-    if (isInApp) {
-      const url = new URL(window.location.href);
-      if (!url.searchParams.has('t')) {
-        url.searchParams.set('t', Date.now().toString());
-        window.location.replace(url.toString());
-      }
+    if (!isInApp) return;
+    const appliedKey = `t_applied_${recordId ?? ''}`;
+    if (sessionStorage.getItem(appliedKey)) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('t')) {
+      url.searchParams.set('t', Date.now().toString());
+      window.history.replaceState(null, '', url.toString());
     }
-  }, [isInApp]);
+    sessionStorage.setItem(appliedKey, '1');
+  }, [isInApp, recordId]);
 
-  // Auto-refetch on visibility/focus/pageshow (only when drawer is closed)
+  // Auto-refetch on visibility/focus/pageshow (queue refetch if drawer is open)
   useEffect(() => {
-    if (isDrawerOpen) return; // Don't set up listeners when drawer is open
-    
     const onVisible = () => { 
-      if (document.visibilityState === 'visible') refetch(); 
+      if (document.visibilityState !== 'visible') return;
+      if (isDrawerOpen) {
+        refetchQueuedRef.current = true;
+      } else {
+        refetch();
+      }
     };
-    const onFocus = () => refetch();
-    const onPageShow = () => refetch();
+    const onFocus = () => {
+      if (isDrawerOpen) {
+        refetchQueuedRef.current = true;
+      } else {
+        refetch();
+      }
+    };
+    const onPageShow = () => {
+      if (isDrawerOpen) {
+        refetchQueuedRef.current = true;
+      } else {
+        refetch();
+      }
+    };
     
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onFocus);
@@ -86,6 +105,11 @@ export const PaymentPage = () => {
   }, [isInApp, refetch]);
 
   const handlePayment = () => {
+    if (paymentData?.paymentUrl) {
+      const url = paymentData.paymentUrl;
+      const withTs = `${url}${url.includes('?') ? '&' : '?'}ts=${Date.now()}`;
+      setDrawerPaymentUrl(withTs);
+    }
     setIsDrawerOpen(true);
     setIsIframeLoading(true);
   };
@@ -193,6 +217,7 @@ export const PaymentPage = () => {
       ) : (
         <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 backdrop-blur-xl bg-background/80 border-t border-border/50">
           <Button
+            type="button"
             onClick={handlePayment}
             className="w-full h-14 md:h-16 text-base md:text-lg font-medium gap-2 bg-primary/90 hover:bg-primary backdrop-blur-md"
           >
@@ -208,7 +233,8 @@ export const PaymentPage = () => {
         onOpenChange={(open) => {
           setIsDrawerOpen(open);
           if (!open) {
-            // Refetch when drawer closes to check payment status
+            // Refetch when drawer closes (also handles any queued refresh)
+            refetchQueuedRef.current = false;
             refetch();
           }
         }}
@@ -227,9 +253,9 @@ export const PaymentPage = () => {
                 </div>
               </div>
             )}
-            {paymentData?.paymentUrl && (
+            {drawerPaymentUrl && (
               <iframe
-                src={paymentData.paymentUrl}
+                src={drawerPaymentUrl}
                 className="w-full h-full border-0"
                 title="CardCom Payment"
                 allow="payment"
