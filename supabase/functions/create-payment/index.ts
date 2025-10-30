@@ -84,7 +84,12 @@ serve(async (req) => {
         CustomFields: [
           { Id: 1, Value: recordId },
           { Id: 2, Value: record.pcfsystemfield770 },
-          { Id: 3, Value: record.pcfsystemfield767 }
+          { Id: 3, Value: record.pcfsystemfield767 },
+          { Id: 4, Value: record.pcfsystemfield814 },
+          { Id: 5, Value: record.pcfsystemfield815 },
+          { Id: 6, Value: record.pcfsystemfield817 },
+          { Id: 7, Value: record.pcfsystemfield822 },
+          { Id: 8, Value: record.pcfsystemfield816 }
         ]
       }
     };
