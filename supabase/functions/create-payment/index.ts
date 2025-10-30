@@ -75,6 +75,12 @@ serve(async (req) => {
       SuccessRedirectUrl: `https://tax-docu-hub-mobile-fireberry.lovable.app/payment-success/${recordId}`,
       FailedRedirectUrl: `https://tax-docu-hub-mobile-fireberry.lovable.app/payment-failed/${recordId}`,
       WebHookUrl: "https://hook.eu1.make.com/wl56f8mnsxz1ueb4kp3c22xzk9kmtd9e",
+      Document: {
+        Name: `${record.pcfsystemfield814} ${record.pcfsystemfield815}`,
+        TaxId: record.pcfsystemfield817,
+        Email: record.pcfsystemfield822,
+        Phone: record.pcfsystemfield816,
+      },
       UIDefinition: {
         IsHideCardOwnerName: false,
         CardOwnerNameValue: `${record.pcfsystemfield815} ${record.pcfsystemfield814}`,
