@@ -29,7 +29,7 @@ const formatCurrency = (amount: number): string => {
 const formatDate = (dateString: string): string => {
   try {
     const date = parseISO(dateString);
-    return format(date, 'd MMMM yyyy', { locale: he });
+    return format(date, "d 'ב'MMMM yyyy", { locale: he });
   } catch {
     return dateString;
   }
