@@ -12,7 +12,7 @@ interface FireberryResponse {
     Record: {
       pcfsystemfield814: string; // first name
       pcfsystemfield815: string; // last name
-      pcfsystemfield804: string; // date of refund
+      pcfsystemfield845: string; // date of refund
       pcfsystemfield803: number; // refund amount
       pcfsystemfield812: number; // commission
       pcfsystemfield813: number; // amount no vat
@@ -65,7 +65,7 @@ serve(async (req) => {
 
     const paymentData = {
       clientName: `${record.pcfsystemfield814} ${record.pcfsystemfield815}`,
-      depositDate: record.pcfsystemfield804,
+      depositDate: record.pcfsystemfield845,
       refundAmount: record.pcfsystemfield803,
       commissionRate: record.pcfsystemfield812,
       feeBeforeVAT: record.pcfsystemfield813,
