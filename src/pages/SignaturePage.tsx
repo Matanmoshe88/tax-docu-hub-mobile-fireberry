@@ -9,6 +9,18 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useFireberryData } from '@/hooks/useFireberryData';
 import { generateContractPDFBlob } from '@/lib/pdfGenerator';
+import { generateContractText } from '@/lib/contractUtils';
+import {
+  AuditData,
+  captureDeviceInfo,
+  getIsraelTimestamp,
+  maskPhone,
+  maskIpAddress,
+  generateHash,
+  getOtpVerificationTime,
+  getContractPageEntryTime,
+  calculateReadingTime,
+} from '@/lib/auditTrail';
 
 export const SignaturePage: React.FC = () => {
   const navigate = useNavigate();
@@ -189,34 +201,91 @@ export const SignaturePage: React.FC = () => {
     return data;
   };
 
-  const generateSignedContract = async (signatureDataURL: string): Promise<Blob> => {
+  const getClientIp = async (): Promise<string> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-client-ip');
+      if (error) throw error;
+      return data?.ip || 'Unknown';
+    } catch (error) {
+      console.error('Failed to get client IP:', error);
+      return 'Unknown';
+    }
+  };
+
+  const collectAuditData = async (signatureDataURL: string): Promise<AuditData> => {
+    const deviceInfo = captureDeviceInfo();
+    const signatureTime = getIsraelTimestamp();
+    const ipAddress = await getClientIp();
+    
+    // Generate hashes
+    const contractText = generateContractText(clientData);
+    const documentHash = await generateHash(contractText);
+    const signatureHash = await generateHash(signatureDataURL);
+    
+    return {
+      // Client Identity
+      clientName: `${clientData.firstName} ${clientData.lastName}`,
+      clientId: clientData.idNumber || '',
+      clientPhone: clientData.phone || '',
+      maskedPhone: maskPhone(clientData.phone || ''),
+      
+      // Phone Verification
+      otpVerificationTime: getOtpVerificationTime(),
+      otpVerified: !!getOtpVerificationTime(),
+      
+      // Document Timeline
+      contractPageEntryTime: getContractPageEntryTime(),
+      signatureTime,
+      timeSpentReadingSeconds: calculateReadingTime(),
+      
+      // Device & Session Info
+      ipAddress,
+      maskedIpAddress: maskIpAddress(ipAddress),
+      userAgent: deviceInfo.userAgent,
+      browserName: deviceInfo.browserName,
+      operatingSystem: deviceInfo.operatingSystem,
+      screenResolution: deviceInfo.screenResolution,
+      timezone: deviceInfo.timezone,
+      language: deviceInfo.language,
+      
+      // Document Integrity
+      documentHash,
+      signatureHash,
+      
+      // Record Reference
+      recordId: recordId || '',
+    };
+  };
+
+  const generateSignedContract = async (signatureDataURL: string, auditData: AuditData): Promise<Blob> => {
     if (import.meta.env.DEV) {
-      console.log('🔄 Generating signed contract PDF...');
+      console.log('🔄 Generating signed contract PDF with audit trail...');
     }
     
     // Transform data to match new API structure
-      const contractData = {
-        contractNumber: recordId || '12345',
-        company: {
-          name: 'קוויק טקס (ג\'י.אי.אמ גלובל)',
-          id: '513218453',
-          address: 'רחוב הרצל 123, תל אביב'
-        },
-        client: {
-          name: `${clientData.firstName} ${clientData.lastName}`,
-          id: clientData.idNumber,
-          phone: clientData.phone,
-          email: clientData.email,
-          address: clientData.address,
-          commissionRate: clientData.commissionRate
-        },
-        yearsRange: clientData.yearsRange,
-        sections: [
+    const contractData = {
+      contractNumber: recordId || '12345',
+      company: {
+        name: 'קוויק טקס (ג\'י.אי.אמ גלובל)',
+        id: '513218453',
+        address: 'רחוב הרצל 123, תל אביב'
+      },
+      client: {
+        name: `${clientData.firstName} ${clientData.lastName}`,
+        id: clientData.idNumber,
+        phone: clientData.phone,
+        email: clientData.email,
+        address: clientData.address,
+        commissionRate: clientData.commissionRate
+      },
+      yearsRange: clientData.yearsRange,
+      sections: [
         { title: 'סעיף 1 - השירות', content: 'החברה מתחייבת לבצע החזרי מס עבור הלקוח' },
         { title: 'סעיף 2 - התשלום', content: `שיעור העמלה: ${clientData.commissionRate}` },
         { title: 'סעיף 3 - תנאים', content: 'הלקוח מתחייב לספק את כל המסמכים הנדרשים' }
       ],
-      debtAmount: '10,000'
+      debtAmount: '10,000',
+      auditData, // Pass audit data to PDF generator
     };
 
     // Use the new PDF generator
@@ -290,15 +359,20 @@ export const SignaturePage: React.FC = () => {
         console.log('✅ Signature uploaded to storage:', signatureUrl);
       }
 
-      // Generate signed contract
+      // Collect audit data
+      console.log('📋 Collecting audit trail data...');
+      const auditData = await collectAuditData(signatureDataURL);
+      console.log('✅ Audit data collected:', auditData);
+
+      // Generate signed contract with audit trail
       if (import.meta.env.DEV) {
         toast({
           title: "יוצר הסכם חתום...",
-          description: "מכין את ההסכם עם החתימה",
+          description: "מכין את ההסכם עם החתימה ונתוני אימות",
         });
       }
       
-      const contractBlob = await generateSignedContract(signatureDataURL);
+      const contractBlob = await generateSignedContract(signatureDataURL, auditData);
       
       // Upload contract to storage
       const contractFileName = `contract-${recordId}-${Date.now()}.pdf`;

@@ -11,6 +11,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Phone, CheckCircle2 } from 'lucide-react';
+import { storeOtpVerificationTime } from '@/lib/auditTrail';
 
 interface OtpVerificationProps {
   isOpen: boolean;
@@ -124,6 +125,9 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
       if (error) throw error;
 
       if (data.valid) {
+        // Store OTP verification timestamp for audit trail
+        storeOtpVerificationTime(phoneNumber);
+        
         toast({
           title: 'אימות הצליח',
           description: 'הקוד אומת בהצלחה',

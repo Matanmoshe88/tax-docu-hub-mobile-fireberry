@@ -1,5 +1,175 @@
 import { jsPDF } from 'jspdf';
 import { generateContractText } from './contractUtils';
+import { AuditData, formatDuration } from './auditTrail';
+
+/**
+ * Generate the audit trail HTML page
+ */
+const generateAuditTrailHTML = (auditData: AuditData): string => {
+  const timeSpentFormatted = auditData.timeSpentReadingSeconds 
+    ? formatDuration(auditData.timeSpentReadingSeconds)
+    : 'לא זמין';
+
+  return `
+    <div class="audit-trail-page" style="
+      page-break-before: always;
+      padding: 40px;
+      font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+      direction: rtl;
+      text-align: right;
+      background: white;
+    ">
+      <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px;">
+        <h1 style="color: #2563eb; font-size: 24px; margin-bottom: 10px;">פרוטוקול אימות חתימה דיגיטלית</h1>
+        <p style="color: #666; font-size: 14px;">Audit Trail - Digital Signature Verification Protocol</p>
+      </div>
+
+      <!-- Client Identity Section -->
+      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #2563eb;">
+        <h2 style="color: #1e40af; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+          🔐 זיהוי הלקוח
+        </h2>
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold; width: 150px;">שם מלא:</td>
+            <td style="padding: 8px 0;">${auditData.clientName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold;">תעודת זהות:</td>
+            <td style="padding: 8px 0;">${auditData.clientId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-weight: bold;">טלפון (מוסתר):</td>
+            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.maskedPhone}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Phone Verification Section -->
+      <div style="margin-bottom: 25px; background: ${auditData.otpVerified ? '#f0fdf4' : '#fef2f2'}; padding: 20px; border-radius: 8px; border-right: 4px solid ${auditData.otpVerified ? '#22c55e' : '#ef4444'};">
+        <h2 style="color: ${auditData.otpVerified ? '#166534' : '#dc2626'}; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid ${auditData.otpVerified ? '#bbf7d0' : '#fecaca'}; padding-bottom: 10px;">
+          📱 אימות טלפוני (OTP)
+        </h2>
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid ${auditData.otpVerified ? '#bbf7d0' : '#fecaca'};">
+            <td style="padding: 8px 0; font-weight: bold; width: 150px;">סטטוס אימות:</td>
+            <td style="padding: 8px 0; color: ${auditData.otpVerified ? '#166534' : '#dc2626'}; font-weight: bold;">
+              ${auditData.otpVerified ? '✅ אומת בהצלחה' : '❌ לא אומת'}
+            </td>
+          </tr>
+          ${auditData.otpVerificationTime ? `
+          <tr>
+            <td style="padding: 8px 0; font-weight: bold;">זמן אימות:</td>
+            <td style="padding: 8px 0;">${auditData.otpVerificationTime}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+
+      <!-- Document Timeline Section -->
+      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #8b5cf6;">
+        <h2 style="color: #6d28d9; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+          ⏱️ ציר זמן המסמך
+        </h2>
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          ${auditData.contractPageEntryTime ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold; width: 180px;">כניסה לעמוד החוזה:</td>
+            <td style="padding: 8px 0;">${auditData.contractPageEntryTime}</td>
+          </tr>
+          ` : ''}
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold;">זמן החתימה:</td>
+            <td style="padding: 8px 0; font-weight: bold; color: #2563eb;">${auditData.signatureTime}</td>
+          </tr>
+          ${auditData.timeSpentReadingSeconds !== null ? `
+          <tr>
+            <td style="padding: 8px 0; font-weight: bold;">זמן קריאה לפני חתימה:</td>
+            <td style="padding: 8px 0;">${timeSpentFormatted}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+
+      <!-- Device & Session Info Section -->
+      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #f59e0b;">
+        <h2 style="color: #d97706; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+          💻 פרטי המכשיר והחיבור
+        </h2>
+        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold; width: 150px;">כתובת IP (מוסתרת):</td>
+            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.maskedIpAddress}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold;">דפדפן:</td>
+            <td style="padding: 8px 0;">${auditData.browserName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold;">מערכת הפעלה:</td>
+            <td style="padding: 8px 0;">${auditData.operatingSystem}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; font-weight: bold;">רזולוציית מסך:</td>
+            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.screenResolution}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-weight: bold;">אזור זמן:</td>
+            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.timezone}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Document Integrity Section -->
+      <div style="margin-bottom: 25px; background: #fdf4ff; padding: 20px; border-radius: 8px; border-right: 4px solid #a855f7;">
+        <h2 style="color: #9333ea; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #f3e8ff; padding-bottom: 10px;">
+          🔒 אימות שלמות המסמך (SHA-256)
+        </h2>
+        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid #f3e8ff;">
+            <td style="padding: 8px 0; font-weight: bold; width: 120px; vertical-align: top;">Hash החוזה:</td>
+            <td style="padding: 8px 0; word-break: break-all; font-family: monospace;" dir="ltr">${auditData.documentHash}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-weight: bold; vertical-align: top;">Hash החתימה:</td>
+            <td style="padding: 8px 0; word-break: break-all; font-family: monospace;" dir="ltr">${auditData.signatureHash}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Record Reference -->
+      <div style="margin-bottom: 25px; background: #f1f5f9; padding: 15px; border-radius: 8px;">
+        <p style="font-size: 12px; color: #64748b; margin: 0;">
+          <strong>מזהה רשומה:</strong> ${auditData.recordId}
+        </p>
+      </div>
+
+      <!-- Legal Declaration -->
+      <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border: 2px solid #2563eb; border-radius: 8px;">
+        <h3 style="color: #1e40af; font-size: 14px; margin-bottom: 10px;">📜 הצהרה משפטית</h3>
+        <p style="font-size: 12px; color: #1e3a5f; line-height: 1.8; margin: 0;">
+          פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על ההסכם. הנתונים המופיעים כאן נאספו באופן אוטומטי 
+          במהלך תהליך החתימה ומשמשים כראייה לזיהוי החותם ולאימות שלמות המסמך. 
+          Hash החוזה והחתימה מאפשרים אימות עצמאי שהמסמך לא שונה לאחר החתימה.
+        </p>
+        <p style="font-size: 11px; color: #64748b; margin-top: 10px; margin-bottom: 0;">
+          This protocol documents the digital signature process. The data was automatically collected 
+          during signing and serves as evidence for signer identification and document integrity verification.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top: 30px; text-align: center; color: #94a3b8; font-size: 10px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+        <p style="margin: 0;">
+          נוצר על ידי מערכת קוויק טקס | QuickTax Digital Signature System
+        </p>
+        <p style="margin: 5px 0 0 0;">
+          כל הזמנים מוצגים לפי אזור הזמן של ישראל (Asia/Jerusalem)
+        </p>
+      </div>
+    </div>
+  `;
+};
 
 // Alternative PDF generation using HTML and proper RTL support
 const generatePDFFromHTML = async (contractData: any, signatureDataURL: string): Promise<Blob> => {
@@ -24,7 +194,7 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
     commission_rate__c: contractData.commission_rate__c
   });
   
-  const clientData = {
+  const clientDataLocal = {
     firstName: contractData.firstName || contractData.client?.name?.split(' ')[0] || contractData.client?.firstName || contractData.Name?.split(' ')[0] || '',
     lastName: contractData.lastName || contractData.client?.name?.split(' ').slice(1).join(' ') || contractData.client?.lastName || contractData.Name?.split(' ').slice(1).join(' ') || '',
     idNumber: contractData.idNumber || contractData.client?.id || contractData.client?.idNumber || contractData.PersonalNumber__c || '',
@@ -36,9 +206,9 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
     yearsRange: contractData.yearsRange || '2018-2023'
   };
 
-  console.log('📋 Processed client data:', clientData);
+  console.log('📋 Processed client data:', clientDataLocal);
 
-  const contractText = generateContractText(clientData);
+  const contractText = generateContractText(clientDataLocal);
   const currentDate = new Date().toLocaleDateString('he-IL');
   
   // Create QuickTax logo as text since we can't access the image file
@@ -201,7 +371,7 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
           ${logoHtml}
           <div>
             <div>תאריך: ${currentDate}</div>
-            <div>מספר חוזה: ${clientData.contractNumber || '___________'}</div>
+            <div>מספר חוזה: ${clientDataLocal.contractNumber || '___________'}</div>
           </div>
         </div>
         
@@ -255,7 +425,7 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
           <div class="promissory-content">
             <div class="content-section"><strong>שטר חוב</strong></div>
             <div class="content-section">שנערך ונחתם ביום ${currentDate}</div>
-            <div class="content-section">אני הח"מ ${clientData.firstName} ${clientData.lastName} ת"ז ${clientData.idNumber} מתחייב/ת לשלם לפקודת ג'י.אי.אמ גלובל ניהול והשקעות בע"מ ח.פ. 513218453</div>
+            <div class="content-section">אני הח"מ ${clientDataLocal.firstName} ${clientDataLocal.lastName} ת"ז ${clientDataLocal.idNumber} מתחייב/ת לשלם לפקודת ג'י.אי.אמ גלובל ניהול והשקעות בע"מ ח.פ. 513218453</div>
             
             <div style="height: 15px;"></div>
             <div class="content-section">סך של ____________________₪ (במילים: _________________________________).</div>
@@ -274,9 +444,9 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
             <div style="height: 20px;"></div>
             <div class="content-section"><strong>פרטי עושה השטר:</strong></div>
             
-            <div class="content-section">שם מלא: ${clientData.firstName} ${clientData.lastName}, מספר תעודת זהות: ${clientData.idNumber}</div>
+            <div class="content-section">שם מלא: ${clientDataLocal.firstName} ${clientDataLocal.lastName}, מספר תעודת זהות: ${clientDataLocal.idNumber}</div>
             
-            <div class="content-section">כתובת: ${clientData.address}</div>
+            <div class="content-section">כתובת: ${clientDataLocal.address}</div>
             
             <div style="height: 30px;"></div>
             
@@ -394,6 +564,65 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
     const promissoryImgData = promissoryCanvas.toDataURL('image/jpeg', 0.7);
     const promissoryImgHeight = (promissoryCanvas.height * imgWidth) / promissoryCanvas.width;
     pdf.addImage(promissoryImgData, 'JPEG', 0, 0, imgWidth, promissoryImgHeight);
+    
+    // Add Audit Trail page if audit data is provided
+    if (contractData.auditData) {
+      console.log('📋 Adding audit trail page to PDF...');
+      
+      // Create audit trail HTML
+      const auditHtmlContent = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="he">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@400;700&display=swap');
+            body {
+              font-family: 'Noto Sans Hebrew', Arial, sans-serif;
+              direction: rtl;
+              text-align: right;
+              margin: 0;
+              padding: 0;
+              background: white;
+            }
+          </style>
+        </head>
+        <body>
+          ${generateAuditTrailHTML(contractData.auditData)}
+        </body>
+        </html>
+      `;
+      
+      // Create temporary div for audit trail
+      const auditDiv = document.createElement('div');
+      auditDiv.innerHTML = auditHtmlContent;
+      auditDiv.style.position = 'absolute';
+      auditDiv.style.left = '-9999px';
+      auditDiv.style.width = '800px';
+      document.body.appendChild(auditDiv);
+      
+      try {
+        // Render audit trail
+        const auditCanvas = await html2canvas(auditDiv.querySelector('.audit-trail-page') as HTMLElement, {
+          allowTaint: true,
+          useCORS: true,
+          scale: 1.2,
+          backgroundColor: '#ffffff',
+          width: 800,
+          windowWidth: 800
+        });
+        
+        // Add audit trail page
+        pdf.addPage();
+        const auditImgData = auditCanvas.toDataURL('image/jpeg', 0.9);
+        const auditImgHeight = (auditCanvas.height * imgWidth) / auditCanvas.width;
+        pdf.addImage(auditImgData, 'JPEG', 0, 0, imgWidth, auditImgHeight);
+        
+        console.log('✅ Audit trail page added successfully');
+      } finally {
+        document.body.removeChild(auditDiv);
+      }
+    }
     
     return pdf.output('blob');
   } finally {

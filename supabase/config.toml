@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.update-settings]
 verify_jwt = false
+
+[functions.get-client-ip]
+verify_jwt = false
