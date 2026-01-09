@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PortalLayout } from '@/components/PortalLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,11 +7,41 @@ import { FileText, User, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFireberryData } from '@/hooks/useFireberryData';
 import { generateContractText } from '@/lib/contractUtils';
+import { OtpVerification } from '@/components/OtpVerification';
+import { supabase } from '@/integrations/supabase/client';
 
 export const ContractPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { clientData, isLoading, recordId, shouldRedirect, redirectTo } = useFireberryData();
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpEnabled, setOtpEnabled] = useState(true);
+  const [checkingOtpSetting, setCheckingOtpSetting] = useState(true);
+
+  // Check if OTP is enabled on mount
+  useEffect(() => {
+    const checkOtpSetting = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-settings', {
+          body: null,
+        });
+
+        if (!error && data?.settings) {
+          const otpSetting = data.settings.find((s: any) => s.setting_key === 'otp_enabled');
+          if (otpSetting) {
+            setOtpEnabled(otpSetting.setting_value?.enabled ?? true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking OTP setting:', error);
+        // Default to enabled if can't fetch
+      } finally {
+        setCheckingOtpSetting(false);
+      }
+    };
+
+    checkOtpSetting();
+  }, []);
 
   // Disable browser back button
   useEffect(() => {
@@ -46,6 +76,22 @@ export const ContractPage: React.FC = () => {
   }, [isLoading, shouldRedirect, redirectTo, navigate, toast]);
 
   const handleNext = () => {
+    // Check if already verified in this session
+    const otpVerified = sessionStorage.getItem(`otp_verified_${recordId}`);
+    
+    if (otpEnabled && !otpVerified) {
+      // Show OTP modal
+      setShowOtpModal(true);
+    } else {
+      // Navigate directly
+      navigate(`/signature/${recordId}`);
+    }
+  };
+
+  const handleOtpVerified = () => {
+    // Store verification in session
+    sessionStorage.setItem(`otp_verified_${recordId}`, 'true');
+    setShowOtpModal(false);
     navigate(`/signature/${recordId}`);
   };
 
@@ -55,7 +101,7 @@ export const ContractPage: React.FC = () => {
 
   const contractText = generateContractText(clientData);
 
-  if (isLoading) {
+  if (isLoading || checkingOtpSetting) {
     return (
       <PortalLayout
         currentStep={1}
@@ -72,47 +118,48 @@ export const ContractPage: React.FC = () => {
   }
 
   return (
-    <PortalLayout
-      currentStep={1}
-      totalSteps={4}
-      onNext={handleNext}
-      onPrevious={handlePrevious}
-      nextLabel="אני מסכים להמשך"
-      previousLabel="חזור לעמוד הבית"
-    >
-      <div className="space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="bg-primary/10 p-4 rounded-full">
-              <FileText className="h-8 w-8 text-primary" />
+    <>
+      <PortalLayout
+        currentStep={1}
+        totalSteps={4}
+        onNext={handleNext}
+        onPrevious={handlePrevious}
+        nextLabel="אני מסכים להמשך"
+        previousLabel="חזור לעמוד הבית"
+      >
+        <div className="space-y-6 animate-fade-in">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="bg-primary/10 p-4 rounded-full">
+                <FileText className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-foreground">הסכם שירות</h1>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              אנא קרא את הסכם השירות בעיון לפני המעבר לשלב הבא. החוזה מפרט את התנאים והזכויות שלך.
+            </p>
+          </div>
+
+
+          {/* Contract Content - Full Width */}
+          <div className="w-screen -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12">
+            <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-6 bg-background">
+              <div className="text-xs sm:text-sm leading-6 sm:leading-7 whitespace-pre-wrap font-hebrew text-right max-w-none">
+                {contractText}
+              </div>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">הסכם שירות</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            אנא קרא את הסכם השירות בעיון לפני המעבר לשלב הבא. החוזה מפרט את התנאים והזכויות שלך.
-          </p>
-        </div>
 
-
-        {/* Contract Content - Full Width */}
-        <div className="w-screen -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12">
-          <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-6 bg-background">
-            <div className="text-xs sm:text-sm leading-6 sm:leading-7 whitespace-pre-wrap font-hebrew text-right max-w-none">
-              {contractText}
-            </div>
-          </div>
-        </div>
-
-        {/* Promissory Note Section */}
-        <div className="w-screen -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12 mt-8">
-          <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-6 bg-muted/20 border-t-2 border-primary/20">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-foreground mb-2">שטר חוב</h2>
-              <p className="text-muted-foreground">שטר חוב להבטחת ביצוע התחייבויות הלקוח</p>
-            </div>
-            <div className="text-xs sm:text-sm leading-6 sm:leading-7 whitespace-pre-wrap font-hebrew text-right max-w-none">
-              {`שטר חוב
+          {/* Promissory Note Section */}
+          <div className="w-screen -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12 mt-8">
+            <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-6 bg-muted/20 border-t-2 border-primary/20">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-foreground mb-2">שטר חוב</h2>
+                <p className="text-muted-foreground">שטר חוב להבטחת ביצוע התחייבויות הלקוח</p>
+              </div>
+              <div className="text-xs sm:text-sm leading-6 sm:leading-7 whitespace-pre-wrap font-hebrew text-right max-w-none">
+                {`שטר חוב
 שנערך ונחתם ביום
 אני הח"מ מתחייב/ת לשלם לפקודת ג'י.אי.אמ גלובל ניהול והשקעות בע"מ ח.פ. 513218453 
 
@@ -136,27 +183,35 @@ export const ContractPage: React.FC = () => {
         
 
 חתימת עושה השטר: _________________________`}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Important Notice */}
-        <Card className="border-warning shadow-card">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <div className="bg-warning/10 p-2 rounded-full mt-1">
-                <FileText className="h-4 w-4 text-warning" />
+          {/* Important Notice */}
+          <Card className="border-warning shadow-card">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="bg-warning/10 p-2 rounded-full mt-1">
+                  <FileText className="h-4 w-4 text-warning" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-warning">שים לב</h3>
+                  <p className="text-sm text-muted-foreground">
+                    על ידי לחיצה על "אני מסכים להמשך" אתה מאשר שקראת והבנת את תנאי ההסכם ומסכים לכל התנאים המפורטים בו.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold text-warning">שים לב</h3>
-                <p className="text-sm text-muted-foreground">
-                  על ידי לחיצה על "אני מסכים להמשך" אתה מאשר שקראת והבנת את תנאי ההסכם ומסכים לכל התנאים המפורטים בו.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </PortalLayout>
+            </CardContent>
+          </Card>
+        </div>
+      </PortalLayout>
+
+      <OtpVerification
+        isOpen={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        onVerified={handleOtpVerified}
+        phoneNumber={clientData.phone || ''}
+      />
+    </>
   );
 };

@@ -13,6 +13,7 @@ import { FinishPage } from "./pages/FinishPage";
 import { PaymentPage } from "./pages/PaymentPage";
 import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentFailedPage } from "./pages/PaymentFailedPage";
+import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/:recordId" element={<HomePage />} />
           <Route path="/contract/:recordId" element={<ContractPage />} />

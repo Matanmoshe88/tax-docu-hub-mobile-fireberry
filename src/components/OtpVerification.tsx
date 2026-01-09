@@ -1,0 +1,265 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Phone, CheckCircle2 } from 'lucide-react';
+
+interface OtpVerificationProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onVerified: () => void;
+  phoneNumber: string;
+}
+
+export const OtpVerification: React.FC<OtpVerificationProps> = ({
+  isOpen,
+  onClose,
+  onVerified,
+  phoneNumber,
+}) => {
+  const { toast } = useToast();
+  const [code, setCode] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [expiryCountdown, setExpiryCountdown] = useState(0);
+
+  // Mask phone number for display
+  const maskedPhone = phoneNumber
+    ? phoneNumber.replace(/(\d{3})(\d{4})(\d+)/, '$1****$3')
+    : '';
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  // Code expiry timer
+  useEffect(() => {
+    if (expiryCountdown > 0) {
+      const timer = setTimeout(() => setExpiryCountdown(expiryCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [expiryCountdown]);
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setCode('');
+      setCodeSent(false);
+      setCountdown(0);
+      setExpiryCountdown(0);
+    }
+  }, [isOpen]);
+
+  const sendOtp = async () => {
+    if (!phoneNumber) {
+      toast({
+        title: 'שגיאה',
+        description: 'מספר טלפון חסר. אנא פנה לתמיכה.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { phone: phoneNumber },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setCodeSent(true);
+        setCountdown(60); // 60 second cooldown for resend
+        setExpiryCountdown(300); // 5 minute expiry
+        toast({
+          title: 'קוד נשלח',
+          description: `קוד אימות נשלח למספר ${maskedPhone}`,
+        });
+      } else {
+        throw new Error(data.error || 'Failed to send OTP');
+      }
+    } catch (error: any) {
+      console.error('Error sending OTP:', error);
+      toast({
+        title: 'שגיאה בשליחת קוד',
+        description: error.message || 'לא ניתן לשלוח את הקוד. אנא נסה שוב.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (code.length !== 6) {
+      toast({
+        title: 'קוד לא תקין',
+        description: 'אנא הזן קוד בן 6 ספרות',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-otp', {
+        body: { phone: phoneNumber, code },
+      });
+
+      if (error) throw error;
+
+      if (data.valid) {
+        toast({
+          title: 'אימות הצליח',
+          description: 'הקוד אומת בהצלחה',
+        });
+        onVerified();
+      } else if (data.expired) {
+        toast({
+          title: 'הקוד פג תוקף',
+          description: 'אנא בקש קוד חדש',
+          variant: 'destructive',
+        });
+        setCode('');
+        setExpiryCountdown(0);
+      } else {
+        toast({
+          title: 'קוד שגוי',
+          description: 'הקוד שהוזן אינו נכון. אנא נסה שוב.',
+          variant: 'destructive',
+        });
+        setCode('');
+      }
+    } catch (error: any) {
+      console.error('Error verifying OTP:', error);
+      toast({
+        title: 'שגיאה באימות',
+        description: error.message || 'לא ניתן לאמת את הקוד. אנא נסה שוב.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="text-center flex items-center justify-center gap-2">
+            <Phone className="h-5 w-5" />
+            אימות מספר טלפון
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {codeSent
+              ? `הזן את הקוד שנשלח למספר ${maskedPhone}`
+              : `נשלח קוד אימות למספר ${maskedPhone}`}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col items-center gap-6 py-4">
+          {!codeSent ? (
+            <Button
+              onClick={sendOtp}
+              disabled={isSending}
+              className="w-full"
+              size="lg"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                  שולח קוד...
+                </>
+              ) : (
+                'שלח קוד אימות'
+              )}
+            </Button>
+          ) : (
+            <>
+              <div className="flex flex-col items-center gap-4">
+                <InputOTP
+                  value={code}
+                  onChange={setCode}
+                  maxLength={6}
+                  disabled={isVerifying}
+                >
+                  <InputOTPGroup className="gap-2" dir="ltr">
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+
+                {expiryCountdown > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    הקוד יפוג בעוד {formatTime(expiryCountdown)}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3 w-full">
+                <Button
+                  onClick={verifyOtp}
+                  disabled={isVerifying || code.length !== 6}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isVerifying ? (
+                    <>
+                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      מאמת...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="ml-2 h-4 w-4" />
+                      אמת קוד
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={sendOtp}
+                  disabled={countdown > 0 || isSending}
+                  className="w-full"
+                >
+                  {countdown > 0
+                    ? `שלח שוב בעוד ${countdown} שניות`
+                    : 'שלח קוד חדש'}
+                </Button>
+              </div>
+            </>
+          )}
+
+          <Button variant="ghost" onClick={onClose} className="w-full">
+            ביטול
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
