@@ -9,6 +9,7 @@ import { useFireberryData } from '@/hooks/useFireberryData';
 import { generateContractText } from '@/lib/contractUtils';
 import { OtpVerification } from '@/components/OtpVerification';
 import { supabase } from '@/integrations/supabase/client';
+import { storeContractPageEntry } from '@/lib/auditTrail';
 
 export const ContractPage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,13 @@ export const ContractPage: React.FC = () => {
 
     checkOtpSetting();
   }, []);
+
+  // Store contract page entry time for audit trail
+  useEffect(() => {
+    if (!isLoading && !checkingOtpSetting) {
+      storeContractPageEntry();
+    }
+  }, [isLoading, checkingOtpSetting]);
 
   // Disable browser back button
   useEffect(() => {
