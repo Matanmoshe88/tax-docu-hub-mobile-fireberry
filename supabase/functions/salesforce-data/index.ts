@@ -25,6 +25,7 @@ interface LeadData {
   Commission__c: number;
   fulladress__c: string;
   ContractSessionTimestamp: string;
+  yearsRange: string;
 }
 
 interface DocumentStatus {
@@ -92,6 +93,58 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
   console.log('🔍 Final mapped leadData:', JSON.stringify(leadData, null, 2));
 
   return leadData;
+}
+
+async function fetchYearsRange(): Promise<string> {
+  console.log('📅 Fetching years range from Fireberry');
+  
+  const tokenId = Deno.env.get('FIREBERRY_TOKEN_ID');
+  if (!tokenId) {
+    console.error('❌ Missing FIREBERRY_TOKEN_ID for years fetch');
+    return '2018-2023';
+  }
+
+  try {
+    const response = await fetch('https://api.fireberry.com/api/query', {
+      method: 'POST',
+      headers: {
+        'TokenID': tokenId,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        page_size: 50,
+        page_number: 1,
+        objecttype: 1024,
+        fields: "pcfyears",
+        query: "pcfyearscontract = 1",
+        sort_by: "pcfyears",
+        sort_type: "asc"
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('❌ Years API error:', response.status);
+      return '2018-2023';
+    }
+
+    const result = await response.json() as any;
+    const years = result.data?.Data?.map((item: any) => item.pcfyears) || [];
+    
+    if (years.length === 0) {
+      console.log('⚠️ No years returned, using fallback');
+      return '2018-2023';
+    }
+    
+    const minYear = years[0];
+    const maxYear = years[years.length - 1];
+    const yearsRange = `${maxYear}-${minYear}`;
+    
+    console.log(`✅ Years range fetched: ${yearsRange}`);
+    return yearsRange;
+  } catch (error) {
+    console.error('❌ Error fetching years:', error);
+    return '2018-2023';
+  }
 }
 
 async function queryExistingDocument(recordId: string, contractSessionTimestamp: string): Promise<string | null> {
@@ -287,6 +340,10 @@ serve(async (req) => {
 
     // Fetch opportunity data from Fireberry
     const leadData = await getOpportunityData(leadId);
+    
+    // Fetch years range and add to leadData
+    const yearsRange = await fetchYearsRange();
+    leadData.yearsRange = yearsRange;
 
     // Check if there's an existing document with the same contract session
     const existingDocumentId = await queryExistingDocument(leadId, leadData.ContractSessionTimestamp);

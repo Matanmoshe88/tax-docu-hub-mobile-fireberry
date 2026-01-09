@@ -12,6 +12,7 @@ interface ClientData {
   email: string;
   address: string;
   commissionRate: string;
+  yearsRange: string;
 }
 
 interface FireberrySession {
@@ -27,7 +28,8 @@ export const useFireberryData = () => {
     phone: "",
     email: "",
     address: "",
-    commissionRate: ""
+    commissionRate: "",
+    yearsRange: "2018-2023"
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isDataFresh, setIsDataFresh] = useState(false);
@@ -109,7 +111,8 @@ export const useFireberryData = () => {
           phone: "",
           email: "",
           address: "",
-          commissionRate: "22%"
+          commissionRate: "22%",
+          yearsRange: "2018-2023"
         };
         
         setClientData(fallbackData);
@@ -134,7 +137,8 @@ export const useFireberryData = () => {
           phone: "",
           email: "",
           address: "",
-          commissionRate: "22%"
+          commissionRate: "22%",
+          yearsRange: "2018-2023"
         };
         
         setClientData(fallbackData);
@@ -188,7 +192,8 @@ export const useFireberryData = () => {
         phone: leadData.MobilePhone || '',
         email: leadData.Email || '',
         address: leadData.fulladress__c || '',
-        commissionRate: `${leadData.Commission__c ?? 22}%`
+        commissionRate: `${leadData.Commission__c ?? 22}%`,
+        yearsRange: leadData.yearsRange || '2018-2023'
       };
 
       console.log('📊 Final updatedClientData being set:', updatedClientData);
@@ -217,7 +222,8 @@ export const useFireberryData = () => {
         phone: "",
         email: "",
         address: "",
-        commissionRate: "22%"
+        commissionRate: "22%",
+        yearsRange: "2018-2023"
       };
       
       setClientData(fallbackData);
