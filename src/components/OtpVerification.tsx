@@ -173,8 +173,8 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
           </DialogTitle>
           <DialogDescription className="text-center">
             {codeSent
-              ? `הזן את הקוד שנשלח למספר ${maskedPhone}`
-              : `נשלח קוד אימות למספר ${maskedPhone}`}
+              ? <>הזן את הקוד שנשלח למספר <span dir="ltr">{maskedPhone}</span></>
+              : <>נשלח קוד אימות למספר <span dir="ltr">{maskedPhone}</span></>}
           </DialogDescription>
         </DialogHeader>
 
