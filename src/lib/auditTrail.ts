@@ -127,6 +127,14 @@ export async function generateHash(content: string): Promise<string> {
  * Parse browser name from user agent
  */
 export function getBrowserName(userAgent: string): string {
+  // Check for in-app browsers first (they also contain Chrome/Safari in their UA)
+  if (userAgent.includes('WhatsApp')) return 'WhatsApp Browser';
+  if (userAgent.includes('Instagram')) return 'Instagram Browser';
+  if (userAgent.includes('FBAN') || userAgent.includes('FBAV')) return 'Facebook Browser';
+  if (userAgent.includes('Telegram')) return 'Telegram Browser';
+  if (userAgent.includes('Line/')) return 'LINE Browser';
+  
+  // Standard browsers
   if (userAgent.includes('Firefox')) return 'Firefox';
   if (userAgent.includes('SamsungBrowser')) return 'Samsung Browser';
   if (userAgent.includes('Opera') || userAgent.includes('OPR')) return 'Opera';

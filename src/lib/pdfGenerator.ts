@@ -612,13 +612,27 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
           windowWidth: 800
         });
         
-        // Add audit trail page
-        pdf.addPage();
+        // Add audit trail page with pagination support
         const auditImgData = auditCanvas.toDataURL('image/jpeg', 0.9);
         const auditImgHeight = (auditCanvas.height * imgWidth) / auditCanvas.width;
-        pdf.addImage(auditImgData, 'JPEG', 0, 0, imgWidth, auditImgHeight);
         
-        console.log('✅ Audit trail page added successfully');
+        let auditHeightLeft = auditImgHeight;
+        let auditPosition = 0;
+        
+        // Add first audit page
+        pdf.addPage();
+        pdf.addImage(auditImgData, 'JPEG', 0, auditPosition, imgWidth, auditImgHeight);
+        auditHeightLeft -= pageHeight;
+        
+        // Add additional pages if audit trail is longer than one page
+        while (auditHeightLeft > 0) {
+          auditPosition = auditHeightLeft - auditImgHeight;
+          pdf.addPage();
+          pdf.addImage(auditImgData, 'JPEG', 0, auditPosition, imgWidth, auditImgHeight);
+          auditHeightLeft -= pageHeight;
+        }
+        
+        console.log('✅ Audit trail page(s) added successfully');
       } finally {
         document.body.removeChild(auditDiv);
       }
