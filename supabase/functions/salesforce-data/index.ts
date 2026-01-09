@@ -10,6 +10,7 @@ interface FireberryOpportunity {
   pcfsystemfield509: string; // first name
   pcfsystemfield511: string; // last name
   pcfsystemfield515: string; // id number
+  pcfsystemfield517: string; // mobile phone
   pcfsystemfield703: number; // commission
   pcfsystemfield527: string; // city
   pcfsystemfield530: string; // street
@@ -84,7 +85,7 @@ async function getOpportunityData(opportunityId: string): Promise<LeadData> {
     Id: opportunityId,
     Name: `${record.pcfsystemfield509 || ''} ${record.pcfsystemfield511 || ''}`.trim(),
     id__c: record.pcfsystemfield515 || '',
-    MobilePhone: '', // Not available in this response
+    MobilePhone: record.pcfsystemfield517 || '',
     Commission__c: (record.pcfsystemfield703 || 23) - 1, // Always subtract 1 from commission
     fulladress__c: '', // Address removed per user request
     ContractSessionTimestamp: record.pcfsystemfield1260 || '',
