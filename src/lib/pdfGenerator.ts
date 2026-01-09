@@ -32,7 +32,8 @@ const generatePDFFromHTML = async (contractData: any, signatureDataURL: string):
     email: contractData.email || contractData.client?.email || contractData.PersonEmail || '',
     address: contractData.address || contractData.client?.address || contractData.PersonMailingStreet || '',
     commissionRate: contractData.commissionRate || contractData.client?.commissionRate || contractData.client?.commission_rate__c || contractData.commission_rate__c || '22%',
-    contractNumber: contractData.contractNumber || contractData.Id || ''
+    contractNumber: contractData.contractNumber || contractData.Id || '',
+    yearsRange: contractData.yearsRange || '2018-2023'
   };
 
   console.log('📋 Processed client data:', clientData);
