@@ -195,22 +195,23 @@ export const SignaturePage: React.FC = () => {
     }
     
     // Transform data to match new API structure
-    const contractData = {
-      contractNumber: recordId || '12345',
-      company: {
-        name: 'קוויק טקס (ג\'י.אי.אמ גלובל)',
-        id: '513218453',
-        address: 'רחוב הרצל 123, תל אביב'
-      },
-      client: {
-        name: `${clientData.firstName} ${clientData.lastName}`,
-        id: clientData.idNumber,
-        phone: clientData.phone,
-        email: clientData.email,
-        address: clientData.address,
-        commissionRate: clientData.commissionRate
-      },
-      sections: [
+      const contractData = {
+        contractNumber: recordId || '12345',
+        company: {
+          name: 'קוויק טקס (ג\'י.אי.אמ גלובל)',
+          id: '513218453',
+          address: 'רחוב הרצל 123, תל אביב'
+        },
+        client: {
+          name: `${clientData.firstName} ${clientData.lastName}`,
+          id: clientData.idNumber,
+          phone: clientData.phone,
+          email: clientData.email,
+          address: clientData.address,
+          commissionRate: clientData.commissionRate
+        },
+        yearsRange: clientData.yearsRange,
+        sections: [
         { title: 'סעיף 1 - השירות', content: 'החברה מתחייבת לבצע החזרי מס עבור הלקוח' },
         { title: 'סעיף 2 - התשלום', content: `שיעור העמלה: ${clientData.commissionRate}` },
         { title: 'סעיף 3 - תנאים', content: 'הלקוח מתחייב לספק את כל המסמכים הנדרשים' }
