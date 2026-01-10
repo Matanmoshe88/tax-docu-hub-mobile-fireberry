@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Phone, CheckCircle2 } from 'lucide-react';
+import { Loader2, Phone } from 'lucide-react';
 import { storeOtpVerificationTime } from '@/lib/auditTrail';
 
 interface OtpVerificationProps {
@@ -33,6 +33,7 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
   const [codeSent, setCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [expiryCountdown, setExpiryCountdown] = useState(0);
+  const hasAutoSent = useRef(false);
 
   // Mask phone number for display
   const maskedPhone = phoneNumber
@@ -55,17 +56,7 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
     }
   }, [expiryCountdown]);
 
-  // Reset state when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setCode('');
-      setCodeSent(false);
-      setCountdown(0);
-      setExpiryCountdown(0);
-    }
-  }, [isOpen]);
-
-  const sendOtp = async () => {
+  const sendOtp = useCallback(async () => {
     if (!phoneNumber) {
       toast({
         title: 'שגיאה',
@@ -104,22 +95,15 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
     } finally {
       setIsSending(false);
     }
-  };
+  }, [phoneNumber, maskedPhone, toast]);
 
-  const verifyOtp = async () => {
-    if (code.length !== 6) {
-      toast({
-        title: 'קוד לא תקין',
-        description: 'אנא הזן קוד בן 6 ספרות',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const verifyOtp = useCallback(async (otpCode: string) => {
+    if (otpCode.length !== 6) return;
 
     setIsVerifying(true);
     try {
       const { data, error } = await supabase.functions.invoke('verify-otp', {
-        body: { phone: phoneNumber, code },
+        body: { phone: phoneNumber, code: otpCode },
       });
 
       if (error) throw error;
@@ -156,10 +140,41 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
         description: error.message || 'לא ניתן לאמת את הקוד. אנא נסה שוב.',
         variant: 'destructive',
       });
+      setCode('');
     } finally {
       setIsVerifying(false);
     }
-  };
+  }, [phoneNumber, toast, onVerified]);
+
+  // Reset state when dialog opens and auto-send OTP
+  useEffect(() => {
+    if (isOpen) {
+      setCode('');
+      setCodeSent(false);
+      setCountdown(0);
+      setExpiryCountdown(0);
+      hasAutoSent.current = false;
+    }
+  }, [isOpen]);
+
+  // Auto-send OTP when modal opens
+  useEffect(() => {
+    if (isOpen && phoneNumber && !hasAutoSent.current && !isSending && !codeSent) {
+      hasAutoSent.current = true;
+      // Small delay to ensure modal is rendered
+      const timer = setTimeout(() => {
+        sendOtp();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, phoneNumber, isSending, codeSent, sendOtp]);
+
+  // Auto-verify when 6 digits are entered
+  useEffect(() => {
+    if (code.length === 6 && !isVerifying && codeSent) {
+      verifyOtp(code);
+    }
+  }, [code, isVerifying, codeSent, verifyOtp]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -178,27 +193,17 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
           <DialogDescription className="text-center">
             {codeSent
               ? <>הזן את הקוד שנשלח למספר <span dir="ltr">{maskedPhone}</span></>
-              : <>נשלח קוד אימות למספר <span dir="ltr">{maskedPhone}</span></>}
+              : <>שולח קוד אימות למספר <span dir="ltr">{maskedPhone}</span></>}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-6 py-4">
           {!codeSent ? (
-            <Button
-              onClick={sendOtp}
-              disabled={isSending}
-              className="w-full"
-              size="lg"
-            >
-              {isSending ? (
-                <>
-                  <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                  שולח קוד...
-                </>
-              ) : (
-                'שלח קוד אימות'
-              )}
-            </Button>
+            // Loading state while auto-sending
+            <div className="flex flex-col items-center gap-4 py-8">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-muted-foreground">שולח קוד אימות...</p>
+            </div>
           ) : (
             <>
               <div className="flex flex-col items-center gap-4">
@@ -218,44 +223,37 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
                   </InputOTPGroup>
                 </InputOTP>
 
-                {expiryCountdown > 0 && (
+                {isVerifying && (
+                  <div className="flex items-center gap-2 text-primary">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">מאמת קוד...</span>
+                  </div>
+                )}
+
+                {expiryCountdown > 0 && !isVerifying && (
                   <p className="text-sm text-muted-foreground">
                     הקוד יפוג בעוד {formatTime(expiryCountdown)}
                   </p>
                 )}
               </div>
 
-              <div className="flex flex-col gap-3 w-full">
-                <Button
-                  onClick={verifyOtp}
-                  disabled={isVerifying || code.length !== 6}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isVerifying ? (
-                    <>
-                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                      מאמת...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="ml-2 h-4 w-4" />
-                      אמת קוד
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={sendOtp}
-                  disabled={countdown > 0 || isSending}
-                  className="w-full"
-                >
-                  {countdown > 0
-                    ? `שלח שוב בעוד ${countdown} שניות`
-                    : 'שלח קוד חדש'}
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                onClick={sendOtp}
+                disabled={countdown > 0 || isSending}
+                className="w-full"
+              >
+                {isSending ? (
+                  <>
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    שולח...
+                  </>
+                ) : countdown > 0 ? (
+                  `שלח שוב בעוד ${countdown} שניות`
+                ) : (
+                  'שלח קוד חדש'
+                )}
+              </Button>
             </>
           )}
 
