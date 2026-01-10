@@ -135,26 +135,81 @@ export const ContractPage: React.FC = () => {
         nextLabel="אני מסכים להמשך"
         previousLabel="חזור לעמוד הבית"
       >
-        <div className="space-y-6 animate-fade-in">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <div className="flex justify-center">
+        <div className="space-y-4 sm:space-y-6 animate-fade-in">
+          {/* Header - compact on mobile */}
+          <div className="text-center space-y-2 sm:space-y-4">
+            {/* Icon hidden on mobile */}
+            <div className="hidden sm:flex justify-center">
               <div className="bg-primary/10 p-4 rounded-full">
                 <FileText className="h-8 w-8 text-primary" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-foreground">הסכם שירות</h1>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              אנא קרא את הסכם השירות בעיון לפני המעבר לשלב הבא. החוזה מפרט את התנאים והזכויות שלך.
+            <h1 className="text-xl sm:text-3xl font-bold text-foreground">הסכם שירות</h1>
+            <p className="text-xs sm:text-base text-muted-foreground max-w-2xl mx-auto px-2">
+              אנא קרא את ההסכם בעיון לפני המעבר לשלב הבא
             </p>
           </div>
 
-
-          {/* Contract Content - Full Width */}
+          {/* Contract Content - Formatted */}
           <div className="w-screen -mx-4 sm:-mx-6 lg:-mx-8 xl:-mx-12">
-            <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-6 bg-background">
-              <div className="text-xs sm:text-sm leading-6 sm:leading-7 whitespace-pre-wrap font-hebrew text-right max-w-none">
-                {contractText}
+            <div className="px-4 sm:px-6 lg:px-8 xl:px-12 py-4 sm:py-6 bg-background">
+              <div className="font-hebrew text-right max-w-none space-y-3">
+                {contractText.split('\n').map((line, index) => {
+                  const trimmed = line.trim();
+                  
+                  // Empty lines as small spacers
+                  if (!trimmed) return <div key={index} className="h-1 sm:h-2" />;
+                  
+                  // Main title
+                  if (trimmed.includes('הסכם שירות להחזרי מס')) {
+                    return (
+                      <h2 key={index} className="text-base sm:text-lg font-bold text-center text-primary py-2 sm:py-3 border-b-2 border-primary/20 mb-3">
+                        {trimmed}
+                      </h2>
+                    );
+                  }
+                  
+                  // Party sections (בין / לבין)
+                  if (trimmed.startsWith('בין :') || trimmed.startsWith('לבין:')) {
+                    return (
+                      <div key={index} className="bg-primary/5 border-r-4 border-primary p-3 my-2 rounded-l-md">
+                        <p className="text-sm sm:text-base font-semibold">{trimmed}</p>
+                      </div>
+                    );
+                  }
+                  
+                  // Numbered sections (1., 2., etc.)
+                  const numberedMatch = trimmed.match(/^(\d+)\.\s*(.*)$/);
+                  if (numberedMatch) {
+                    const [, num, content] = numberedMatch;
+                    return (
+                      <div key={index} className="my-3 sm:my-4">
+                        <div className="flex gap-2 sm:gap-3 items-start">
+                          <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
+                            {num}
+                          </span>
+                          <p className="text-xs sm:text-sm leading-6 sm:leading-7 flex-1">{content}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Sub-points with letters (א., ב., etc.)
+                  if (/^[א-ת]\./.test(trimmed)) {
+                    return (
+                      <div key={index} className="mr-6 sm:mr-8 my-1">
+                        <p className="text-xs sm:text-sm leading-6 sm:leading-7 text-muted-foreground">{trimmed}</p>
+                      </div>
+                    );
+                  }
+                  
+                  // Regular paragraphs
+                  return (
+                    <p key={index} className="text-xs sm:text-sm leading-6 sm:leading-7 my-1 sm:my-2">
+                      {trimmed}
+                    </p>
+                  );
+                })}
               </div>
             </div>
           </div>
