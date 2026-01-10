@@ -203,6 +203,15 @@ export const ContractPage: React.FC = () => {
                     );
                   }
                   
+                  // Special highlighted text
+                  if (trimmed.includes('ככל והלקוח לא יהיה ימצא זכאי להחזר')) {
+                    return (
+                      <p key={index} className="text-xs sm:text-sm leading-6 sm:leading-7 my-1 sm:my-2 font-bold text-destructive">
+                        {trimmed}
+                      </p>
+                    );
+                  }
+                  
                   // Regular paragraphs
                   return (
                     <p key={index} className="text-xs sm:text-sm leading-6 sm:leading-7 my-1 sm:my-2">
