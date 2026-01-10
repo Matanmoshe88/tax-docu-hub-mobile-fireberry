@@ -76,7 +76,7 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
 
       if (data.success) {
         setCodeSent(true);
-        setCountdown(60); // 60 second cooldown for resend
+        setCountdown(15); // 15 second cooldown for resend
         setExpiryCountdown(300); // 5 minute expiry
         toast({
           title: 'קוד נשלח',
@@ -212,6 +212,7 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
                   onChange={setCode}
                   maxLength={6}
                   disabled={isVerifying}
+                  autoFocus
                 >
                   <InputOTPGroup className="gap-2" dir="ltr">
                     <InputOTPSlot index={0} />
