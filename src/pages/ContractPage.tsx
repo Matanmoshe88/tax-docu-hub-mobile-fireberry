@@ -105,9 +105,6 @@ export const ContractPage: React.FC = () => {
     setShowOtpModal(false);
     navigate(`/signature/${recordId}`);
   };
-  const handlePrevious = () => {
-    navigate('/');
-  };
   const contractText = generateContractText(clientData);
   if (isLoading || checkingOtpSetting) {
     return <PortalLayout currentStep={1} totalSteps={4} nextLabel="טוען..." onNext={() => {}}>
@@ -118,7 +115,7 @@ export const ContractPage: React.FC = () => {
       </PortalLayout>;
   }
   return <>
-      <PortalLayout currentStep={1} totalSteps={4} onNext={handleNext} onPrevious={handlePrevious} nextLabel="אני מסכים להמשך" previousLabel="חזור לעמוד הבית">
+      <PortalLayout currentStep={1} totalSteps={4} onNext={handleNext} nextLabel="עבור לחתימה">
         <div className="space-y-4 sm:space-y-6 animate-fade-in">
           {/* Header - compact on mobile */}
           <div className="text-center space-y-2 sm:space-y-4">
@@ -237,7 +234,7 @@ export const ContractPage: React.FC = () => {
                 <div className="space-y-2">
                   <h3 className="font-semibold text-warning">שים לב</h3>
                   <p className="text-sm text-muted-foreground">
-                    על ידי לחיצה על "אני מסכים להמשך" אתה מאשר שקראת והבנת את תנאי ההסכם ומסכים לכל התנאים המפורטים בו.
+                    על ידי לחיצה על "עבור לחתימה" אתה מאשר שקראת והבנת את תנאי ההסכם ומסכים לכל התנאים המפורטים בו.
                   </p>
                 </div>
               </div>

@@ -63,16 +63,18 @@ export const PortalLayout: React.FC<PortalLayoutProps> = ({
       {showNavigation && (
         <footer className="sticky bottom-0 bg-white/80 backdrop-blur-sm border-t border-border/50">
           <div className="container mx-auto px-4 py-6">
-            <div className="flex justify-between items-center max-w-4xl mx-auto">
-              <Button
-                variant="outline"
-                onClick={onPrevious}
-                disabled={currentStep === 1}
-                className="flex items-center gap-2"
-              >
-                <ArrowRight className="h-4 w-4" />
-                {previousLabel}
-              </Button>
+            <div className={`flex items-center max-w-4xl mx-auto ${onPrevious ? 'justify-between' : 'justify-center'}`}>
+              {onPrevious && (
+                <Button
+                  variant="outline"
+                  onClick={onPrevious}
+                  disabled={currentStep === 1}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  {previousLabel}
+                </Button>
+              )}
               
               <Button
                 onClick={onNext}
