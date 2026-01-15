@@ -14,6 +14,8 @@ export interface AuditData {
   smsSentTime: string | null;
   smsMessageId: string | null;
   smsProviderStatus: string | null;
+  smsProviderStatusId: number | null;
+  smsProviderStatusDescription: string | null;
   
   // Phone Verification - OTP Entry & Verification
   otpCodeEntered: string | null;
@@ -66,6 +68,8 @@ const AUDIT_KEYS = {
   SMS_SENT_TIME: 'audit_sms_sent_time',
   SMS_MESSAGE_ID: 'audit_sms_message_id',
   SMS_PROVIDER_STATUS: 'audit_sms_provider_status',
+  SMS_PROVIDER_STATUS_ID: 'audit_sms_provider_status_id',
+  SMS_PROVIDER_STATUS_DESC: 'audit_sms_provider_status_desc',
   OTP_CODE_ENTERED: 'audit_otp_code_entered',
 } as const;
 
@@ -220,22 +224,43 @@ export function captureDeviceInfo(): {
 /**
  * Store SMS sent data from InforUMobile response (3rd party)
  */
-export function storeSmsData(smsSentTime: string, messageId: string | null, providerStatus: string): void {
+export function storeSmsData(
+  smsSentTime: string, 
+  messageId: string | null, 
+  providerStatus: string,
+  providerStatusId?: number,
+  providerStatusDescription?: string
+): void {
   sessionStorage.setItem(AUDIT_KEYS.SMS_SENT_TIME, smsSentTime);
   if (messageId) {
     sessionStorage.setItem(AUDIT_KEYS.SMS_MESSAGE_ID, messageId);
   }
   sessionStorage.setItem(AUDIT_KEYS.SMS_PROVIDER_STATUS, providerStatus);
+  if (providerStatusId !== undefined) {
+    sessionStorage.setItem(AUDIT_KEYS.SMS_PROVIDER_STATUS_ID, providerStatusId.toString());
+  }
+  if (providerStatusDescription) {
+    sessionStorage.setItem(AUDIT_KEYS.SMS_PROVIDER_STATUS_DESC, providerStatusDescription);
+  }
 }
 
 /**
  * Get stored SMS sent time
  */
-export function getSmsData(): { smsSentTime: string | null; smsMessageId: string | null; smsProviderStatus: string | null } {
+export function getSmsData(): { 
+  smsSentTime: string | null; 
+  smsMessageId: string | null; 
+  smsProviderStatus: string | null;
+  smsProviderStatusId: number | null;
+  smsProviderStatusDescription: string | null;
+} {
+  const statusId = sessionStorage.getItem(AUDIT_KEYS.SMS_PROVIDER_STATUS_ID);
   return {
     smsSentTime: sessionStorage.getItem(AUDIT_KEYS.SMS_SENT_TIME),
     smsMessageId: sessionStorage.getItem(AUDIT_KEYS.SMS_MESSAGE_ID),
     smsProviderStatus: sessionStorage.getItem(AUDIT_KEYS.SMS_PROVIDER_STATUS),
+    smsProviderStatusId: statusId ? parseInt(statusId, 10) : null,
+    smsProviderStatusDescription: sessionStorage.getItem(AUDIT_KEYS.SMS_PROVIDER_STATUS_DESC),
   };
 }
 

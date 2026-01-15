@@ -31,7 +31,7 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
       </div>
 
       <!-- Client Identity Section -->
-      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #2563eb;">
+      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #2563eb; page-break-inside: avoid; break-inside: avoid;">
         <h2 style="color: #1e40af; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
           🔐 זיהוי הלקוח
         </h2>
@@ -45,14 +45,14 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0;">${auditData.clientId}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; font-weight: bold;">טלפון (מוסתר):</td>
-            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.maskedPhone}</td>
+            <td style="padding: 8px 0; font-weight: bold;">טלפון:</td>
+            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.clientPhone}</td>
           </tr>
         </table>
       </div>
 
       <!-- Phone Verification Section - Enhanced with 3rd Party Timestamps -->
-      <div style="margin-bottom: 25px; background: ${auditData.otpVerified ? '#f0fdf4' : '#fef2f2'}; padding: 20px; border-radius: 8px; border-right: 4px solid ${auditData.otpVerified ? '#22c55e' : '#ef4444'};">
+      <div style="margin-bottom: 25px; background: ${auditData.otpVerified ? '#f0fdf4' : '#fef2f2'}; padding: 20px; border-radius: 8px; border-right: 4px solid ${auditData.otpVerified ? '#22c55e' : '#ef4444'}; page-break-inside: avoid; break-inside: avoid;">
         <h2 style="color: ${auditData.otpVerified ? '#166534' : '#dc2626'}; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid ${auditData.otpVerified ? '#bbf7d0' : '#fecaca'}; padding-bottom: 10px;">
           📱 אימות טלפוני (OTP)
         </h2>
@@ -63,6 +63,9 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0;">
               <div style="font-weight: bold;">${smsSentTimeFormatted}</div>
               <div style="font-size: 11px; color: #059669; margin-top: 2px;">(אושר על ידי צד ג׳ - InforUMobile)</div>
+              ${auditData.smsProviderStatusId !== undefined && auditData.smsProviderStatusId !== null ? `
+              <div style="font-size: 10px; color: #059669; margin-top: 2px;">סטטוס: ${auditData.smsProviderStatusId} - ${auditData.smsProviderStatusDescription || 'Success'}</div>
+              ` : ''}
             </td>
           </tr>
           ` : ''}
@@ -91,7 +94,7 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
       </div>
 
       <!-- Document Timeline Section - Enhanced with 3rd Party Timestamps -->
-      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #8b5cf6;">
+      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #8b5cf6; page-break-inside: avoid; break-inside: avoid;">
         <h2 style="color: #6d28d9; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
           ⏱️ ציר זמן המסמך
         </h2>
@@ -112,7 +115,7 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
           ` : ''}
           ${signatureSubmittedAtFormatted ? `
           <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 8px 0; font-weight: bold;">🔒 חתימה:</td>
+            <td style="padding: 8px 0; font-weight: bold;">🔒 זמן החתימה:</td>
             <td style="padding: 8px 0;">
               <div style="font-weight: bold; color: #2563eb;">${signatureSubmittedAtFormatted}</div>
               <div style="font-size: 11px; color: #2563eb; margin-top: 2px;">(חותמת זמן שרת Supabase)</div>
@@ -134,7 +137,7 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
       </div>
 
       <!-- Device & Session Info Section -->
-      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #f59e0b;">
+      <div style="margin-bottom: 25px; background: #f8fafc; padding: 20px; border-radius: 8px; border-right: 4px solid #f59e0b; page-break-inside: avoid; break-inside: avoid;">
         <h2 style="color: #d97706; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
           💻 פרטי המכשיר והחיבור
         </h2>
@@ -163,7 +166,7 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
       </div>
 
       <!-- Document Integrity Section - Enhanced with PDF Hash -->
-      <div style="margin-bottom: 25px; background: #fdf4ff; padding: 20px; border-radius: 8px; border-right: 4px solid #a855f7;">
+      <div style="margin-bottom: 25px; background: #fdf4ff; padding: 20px; border-radius: 8px; border-right: 4px solid #a855f7; page-break-inside: avoid; break-inside: avoid;">
         <h2 style="color: #9333ea; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #f3e8ff; padding-bottom: 10px;">
           🔒 אימות שלמות המסמך (SHA-256)
         </h2>
@@ -193,14 +196,14 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
       </div>
 
       <!-- Record Reference -->
-      <div style="margin-bottom: 25px; background: #f1f5f9; padding: 15px; border-radius: 8px;">
+      <div style="margin-bottom: 25px; background: #f1f5f9; padding: 15px; border-radius: 8px; page-break-inside: avoid; break-inside: avoid;">
         <p style="font-size: 12px; color: #64748b; margin: 0;">
           <strong>מזהה רשומה:</strong> ${auditData.recordId}
         </p>
       </div>
 
       <!-- Legal Declaration -->
-      <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border: 2px solid #2563eb; border-radius: 8px;">
+      <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border: 2px solid #2563eb; border-radius: 8px; page-break-inside: avoid; break-inside: avoid;">
         <h3 style="color: #1e40af; font-size: 14px; margin-bottom: 10px;">📜 הצהרה משפטית</h3>
         <p style="font-size: 12px; color: #1e3a5f; line-height: 1.8; margin: 0;">
           פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על ההסכם. חותמות הזמן המסומנות ב-🔒 התקבלו מצד ג׳ 

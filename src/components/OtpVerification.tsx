@@ -84,7 +84,9 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
           storeSmsData(
             data.smsSentTime,
             data.smsMessageId || null,
-            data.smsProviderStatus || 'אושר על ידי צד ג - InforUMobile'
+            data.smsProviderStatus || 'אושר על ידי צד ג - InforUMobile',
+            data.providerStatusId,
+            data.providerStatusDescription
           );
         }
         
