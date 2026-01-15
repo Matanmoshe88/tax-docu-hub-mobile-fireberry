@@ -17,9 +17,13 @@ import {
   maskPhone,
   maskIpAddress,
   generateHash,
+  generateHashFromBytes,
   getOtpVerificationTime,
   getContractPageEntryTime,
+  getContractViewedAtIso,
   calculateReadingTime,
+  getSmsData,
+  getOtpVerificationData,
 } from '@/lib/auditTrail';
 
 export const SignaturePage: React.FC = () => {
@@ -259,15 +263,29 @@ export const SignaturePage: React.FC = () => {
     }
   };
 
-  const collectAuditData = async (signatureDataURL: string): Promise<AuditData> => {
+  const collectAuditData = async (signatureDataURL: string, signatureBlob: Blob, pdfBlob: Blob | null = null): Promise<AuditData> => {
     const deviceInfo = captureDeviceInfo();
     const signatureTime = getIsraelTimestamp();
     const ipAddress = await getClientIp();
     
-    // Generate hashes
+    // Get SMS and OTP data from session storage
+    const smsData = getSmsData();
+    const otpData = getOtpVerificationData();
+    
+    // Generate legacy hashes (for PDF display, based on text content)
     const contractText = generateContractText(clientData);
     const documentHash = await generateHash(contractText);
-    const signatureHash = await generateHash(signatureDataURL);
+    const legacySignatureHash = await generateHash(signatureDataURL);
+    
+    // Generate verifiable hashes from actual bytes
+    const signatureBytes = await signatureBlob.arrayBuffer();
+    const signatureHash = await generateHashFromBytes(signatureBytes);
+    
+    let pdfHash: string | null = null;
+    if (pdfBlob) {
+      const pdfBytes = await pdfBlob.arrayBuffer();
+      pdfHash = await generateHashFromBytes(pdfBytes);
+    }
     
     return {
       // Client Identity
@@ -276,13 +294,21 @@ export const SignaturePage: React.FC = () => {
       clientPhone: clientData.phone || '',
       maskedPhone: maskPhone(clientData.phone || ''),
       
-      // Phone Verification
-      otpVerificationTime: getOtpVerificationTime(),
-      otpVerified: !!getOtpVerificationTime(),
+      // Phone Verification - SMS Sending (InforUMobile 3rd party)
+      smsSentTime: smsData.smsSentTime,
+      smsMessageId: smsData.smsMessageId,
+      smsProviderStatus: smsData.smsProviderStatus,
+      
+      // Phone Verification - OTP Entry & Verification
+      otpCodeEntered: otpData.codeEntered,
+      otpVerified: !!otpData.verificationTime,
+      otpVerificationTime: otpData.verificationTime,
       
       // Document Timeline
       contractPageEntryTime: getContractPageEntryTime(),
+      contractViewedAt: getContractViewedAtIso(),
       signatureTime,
+      signatureSubmittedAt: null, // Will be set by server
       timeSpentReadingSeconds: calculateReadingTime(),
       
       // Device & Session Info
@@ -295,12 +321,23 @@ export const SignaturePage: React.FC = () => {
       timezone: deviceInfo.timezone,
       language: deviceInfo.language,
       
-      // Document Integrity
-      documentHash,
+      // Document Integrity (SHA256 hashes of actual bytes)
+      pdfHash,
       signatureHash,
+      
+      // Legacy hashes (for PDF display)
+      documentHash,
+      legacySignatureHash,
+      
+      // Storage References (will be filled after upload)
+      pdfStoragePath: null,
+      signatureStoragePath: null,
+      pdfPublicUrl: null,
+      signaturePublicUrl: null,
       
       // Record Reference
       recordId: recordId || '',
+      documentId: documentId || null,
     };
   };
 
@@ -402,13 +439,16 @@ export const SignaturePage: React.FC = () => {
       }
       
       const signatureUrl = await uploadSignatureToStorage(signatureBlob);
+      const signatureStoragePath = `signature-${recordId}-${Date.now()}.png`;
       if (import.meta.env.DEV) {
         console.log('✅ Signature uploaded to storage:', signatureUrl);
       }
 
-      // Collect audit data
+      // Collect initial audit data (without PDF hash yet)
       console.log('📋 Collecting audit trail data...');
-      const auditData = await collectAuditData(signatureDataURL);
+      let auditData = await collectAuditData(signatureDataURL, signatureBlob);
+      auditData.signatureStoragePath = signatureStoragePath;
+      auditData.signaturePublicUrl = signatureUrl;
       console.log('✅ Audit data collected:', auditData);
 
       // Generate signed contract with audit trail
@@ -420,6 +460,11 @@ export const SignaturePage: React.FC = () => {
       }
       
       const contractBlob = await generateSignedContract(signatureDataURL, auditData);
+      
+      // Calculate PDF hash from actual bytes
+      const pdfBytes = await contractBlob.arrayBuffer();
+      auditData.pdfHash = await generateHashFromBytes(pdfBytes);
+      console.log('✅ PDF hash generated:', auditData.pdfHash);
       
       // Upload contract to storage
       const contractFileName = `contract-${recordId}-${Date.now()}.pdf`;
@@ -437,6 +482,27 @@ export const SignaturePage: React.FC = () => {
       const { data: { publicUrl: contractUrl } } = supabase.storage
         .from('signatures')
         .getPublicUrl(contractFileName);
+
+      // Update audit data with storage references
+      auditData.pdfStoragePath = contractFileName;
+      auditData.pdfPublicUrl = contractUrl;
+
+      // Store audit trail in database
+      console.log('📋 Storing audit trail in database...');
+      const { data: auditResult, error: auditError } = await supabase.functions.invoke('store-audit-trail', {
+        body: auditData
+      });
+
+      if (auditError) {
+        console.error('❌ Failed to store audit trail:', auditError);
+        // Don't fail the whole process for audit trail error
+      } else {
+        console.log('✅ Audit trail stored:', auditResult);
+        // Update with server-side signature timestamp
+        if (auditResult?.signatureSubmittedAt) {
+          auditData.signatureSubmittedAt = auditResult.signatureSubmittedAt;
+        }
+      }
 
       // Send signature and contract to Fireberry
       if (import.meta.env.DEV) {

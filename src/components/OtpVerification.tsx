@@ -11,7 +11,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Phone } from 'lucide-react';
-import { storeOtpVerificationTime } from '@/lib/auditTrail';
+import { storeSmsData, storeOtpVerificationData } from '@/lib/auditTrail';
 
 interface OtpVerificationProps {
   isOpen: boolean;
@@ -78,6 +78,16 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
         setCodeSent(true);
         setCountdown(15); // 15 second cooldown for resend
         setExpiryCountdown(300); // 5 minute expiry
+        
+        // Store SMS data from InforUMobile response (3rd party)
+        if (data.smsSentTime) {
+          storeSmsData(
+            data.smsSentTime,
+            data.smsMessageId || null,
+            data.smsProviderStatus || 'אושר על ידי צד ג - InforUMobile'
+          );
+        }
+        
         toast({
           title: 'קוד נשלח',
           description: `קוד אימות נשלח למספר ${maskedPhone}`,
@@ -109,8 +119,12 @@ export const OtpVerification: React.FC<OtpVerificationProps> = ({
       if (error) throw error;
 
       if (data.valid) {
-        // Store OTP verification timestamp for audit trail
-        storeOtpVerificationTime(phoneNumber);
+        // Store OTP verification data from server response (3rd party timestamps)
+        storeOtpVerificationData(
+          phoneNumber,
+          data.verificationTime || new Date().toISOString(),
+          data.codeEntered || otpCode
+        );
         
         toast({
           title: 'אימות הצליח',
