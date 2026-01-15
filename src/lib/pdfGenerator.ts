@@ -62,7 +62,7 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0; font-weight: bold; width: 180px;">🔒 SMS נשלח:</td>
             <td style="padding: 8px 0;">
               <div style="font-weight: bold;">${smsSentTimeFormatted}</div>
-              <div style="font-size: 11px; color: #059669; margin-top: 2px;">(אושר על ידי צד ג׳ - InforUMobile)</div>
+              <div style="font-size: 11px; color: #059669; margin-top: 2px;">(נשלח על ידי צד ג׳)</div>
               ${auditData.smsProviderStatusId !== undefined && auditData.smsProviderStatusId !== null ? `
               <div style="font-size: 10px; color: #059669; margin-top: 2px;">סטטוס: ${auditData.smsProviderStatusId} - ${auditData.smsProviderStatusDescription || 'Success'}</div>
               ` : ''}
@@ -80,7 +80,6 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0; font-weight: bold;">🔒 זמן אימות OTP:</td>
             <td style="padding: 8px 0;">
               <div style="font-weight: bold;">${otpVerificationTimeFormatted}</div>
-              <div style="font-size: 11px; color: #2563eb; margin-top: 2px;">(חותמת זמן שרת Supabase)</div>
             </td>
           </tr>
           ` : ''}
@@ -104,7 +103,6 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0; font-weight: bold; width: 180px;">🔒 כניסה להסכם:</td>
             <td style="padding: 8px 0;">
               <div style="font-weight: bold;">${contractViewedAtFormatted}</div>
-              <div style="font-size: 11px; color: #2563eb; margin-top: 2px;">(חותמת זמן שרת Supabase)</div>
             </td>
           </tr>
           ` : auditData.contractPageEntryTime ? `
@@ -118,7 +116,6 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0; font-weight: bold;">🔒 זמן החתימה:</td>
             <td style="padding: 8px 0;">
               <div style="font-weight: bold; color: #2563eb;">${signatureSubmittedAtFormatted}</div>
-              <div style="font-size: 11px; color: #2563eb; margin-top: 2px;">(חותמת זמן שרת Supabase)</div>
             </td>
           </tr>
           ` : auditData.signatureTime ? `
@@ -143,8 +140,8 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
         </h2>
         <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
           <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 8px 0; font-weight: bold; width: 150px;">כתובת IP (מוסתרת):</td>
-            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.maskedIpAddress}</td>
+            <td style="padding: 8px 0; font-weight: bold; width: 150px;">כתובת IP:</td>
+            <td style="padding: 8px 0;" dir="ltr" style="text-align: left;">${auditData.ipAddress}</td>
           </tr>
           <tr style="border-bottom: 1px solid #e2e8f0;">
             <td style="padding: 8px 0; font-weight: bold;">דפדפן:</td>
@@ -165,35 +162,6 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
         </table>
       </div>
 
-      <!-- Document Integrity Section - Enhanced with PDF Hash -->
-      <div style="margin-bottom: 25px; background: #fdf4ff; padding: 20px; border-radius: 8px; border-right: 4px solid #a855f7; page-break-inside: avoid; break-inside: avoid;">
-        <h2 style="color: #9333ea; font-size: 16px; margin-bottom: 15px; border-bottom: 1px solid #f3e8ff; padding-bottom: 10px;">
-          🔒 אימות שלמות המסמך (SHA-256)
-        </h2>
-        <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
-          ${auditData.pdfHash ? `
-          <tr style="border-bottom: 1px solid #f3e8ff;">
-            <td style="padding: 8px 0; font-weight: bold; width: 140px; vertical-align: top;">🔒 Hash קובץ PDF:</td>
-            <td style="padding: 8px 0;">
-              <div style="word-break: break-all; font-family: monospace;" dir="ltr">${auditData.pdfHash}</div>
-              <div style="font-size: 10px; color: #9333ea; margin-top: 4px;">(ניתן לאמת ע״י חישוב SHA-256 של קובץ ה-PDF)</div>
-            </td>
-          </tr>
-          ` : auditData.documentHash ? `
-          <tr style="border-bottom: 1px solid #f3e8ff;">
-            <td style="padding: 8px 0; font-weight: bold; width: 120px; vertical-align: top;">Hash החוזה:</td>
-            <td style="padding: 8px 0; word-break: break-all; font-family: monospace;" dir="ltr">${auditData.documentHash}</td>
-          </tr>
-          ` : ''}
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold; vertical-align: top;">🔒 Hash החתימה:</td>
-            <td style="padding: 8px 0;">
-              <div style="word-break: break-all; font-family: monospace;" dir="ltr">${auditData.signatureHash}</div>
-              <div style="font-size: 10px; color: #9333ea; margin-top: 4px;">(ניתן לאמת ע״י חישוב SHA-256 של קובץ החתימה)</div>
-            </td>
-          </tr>
-        </table>
-      </div>
 
       <!-- Record Reference -->
       <div style="margin-bottom: 25px; background: #f1f5f9; padding: 15px; border-radius: 8px; page-break-inside: avoid; break-inside: avoid;">
@@ -206,13 +174,10 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
       <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border: 2px solid #2563eb; border-radius: 8px; page-break-inside: avoid; break-inside: avoid;">
         <h3 style="color: #1e40af; font-size: 14px; margin-bottom: 10px;">📜 הצהרה משפטית</h3>
         <p style="font-size: 12px; color: #1e3a5f; line-height: 1.8; margin: 0;">
-          פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על ההסכם. חותמות הזמן המסומנות ב-🔒 התקבלו מצד ג׳ 
-          (InforUMobile / Supabase) ולא ניתן לשנותן. Hash קובץ ה-PDF מאפשר לאמת שהמסמך לא שונה לאחר החתימה - 
-          ניתן לחשב SHA-256 של הקובץ ולהשוות ל-Hash המופיע כאן.
+          פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על ההסכם. חותמות הזמן המסומנות ב-🔒 התקבלו מצד ג׳ ולא ניתן לשנותן.
         </p>
         <p style="font-size: 11px; color: #64748b; margin-top: 10px; margin-bottom: 0;">
-          Timestamps marked with 🔒 are 3rd-party verified (InforUMobile / Supabase) and cannot be altered.
-          The PDF hash allows independent verification that the document was not modified after signing.
+          Timestamps marked with 🔒 are 3rd-party verified and cannot be altered.
         </p>
       </div>
 
