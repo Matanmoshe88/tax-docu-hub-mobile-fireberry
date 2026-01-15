@@ -14,12 +14,52 @@ serve(async (req) => {
   try {
     const auditData = await req.json();
 
-    console.log('Storing audit trail for record:', auditData.recordId);
-
     // Initialize Supabase client with service role (bypasses RLS)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check if this is an UPDATE operation (has auditTrailId)
+    if (auditData.auditTrailId) {
+      console.log('Updating audit trail record:', auditData.auditTrailId);
+      
+      const updateData: any = {};
+      
+      // Only update fields that are provided
+      if (auditData.pdfHash) updateData.pdf_hash = auditData.pdfHash;
+      if (auditData.pdfStoragePath) updateData.pdf_storage_path = auditData.pdfStoragePath;
+      if (auditData.pdfPublicUrl) updateData.pdf_public_url = auditData.pdfPublicUrl;
+
+      const { data, error } = await supabase
+        .from('audit_trails')
+        .update(updateData)
+        .eq('id', auditData.auditTrailId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating audit trail:', error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to update audit trail', details: error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Audit trail updated successfully:', data.id);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          updated: true,
+          auditTrailId: data.id,
+          message: 'Audit trail updated successfully'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // CREATE operation - new audit trail record
+    console.log('Storing new audit trail for record:', auditData.recordId);
 
     // Server timestamp for signature submission (3rd party timestamp)
     const signatureSubmittedAt = new Date().toISOString();
@@ -61,6 +101,7 @@ serve(async (req) => {
       language: auditData.language || null,
       
       // Document Integrity (SHA256 hashes of actual bytes)
+      // Note: PDF hash will be updated later after PDF generation
       pdf_hash: auditData.pdfHash || null,
       signature_hash: auditData.signatureHash || null,
       

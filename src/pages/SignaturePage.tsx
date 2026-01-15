@@ -298,11 +298,13 @@ export const SignaturePage: React.FC = () => {
       smsSentTime: smsData.smsSentTime,
       smsMessageId: smsData.smsMessageId,
       smsProviderStatus: smsData.smsProviderStatus,
+      smsProviderStatusId: smsData.smsProviderStatusId,
+      smsProviderStatusDescription: smsData.smsProviderStatusDescription,
       
       // Phone Verification - OTP Entry & Verification
       otpCodeEntered: otpData.codeEntered,
       otpVerified: !!otpData.verificationTime,
-      otpVerificationTime: otpData.verificationTime,
+      otpVerificationTime: otpData.verificationTimeIso,
       
       // Document Timeline
       contractPageEntryTime: getContractPageEntryTime(),
@@ -451,7 +453,26 @@ export const SignaturePage: React.FC = () => {
       auditData.signaturePublicUrl = signatureUrl;
       console.log('✅ Audit data collected:', auditData);
 
-      // Generate signed contract with audit trail
+      // STEP 1: Store audit trail FIRST to get server timestamp
+      console.log('📋 Storing initial audit trail to get server timestamp...');
+      const { data: auditResult, error: auditError } = await supabase.functions.invoke('store-audit-trail', {
+        body: auditData
+      });
+
+      if (auditError) {
+        console.error('❌ Failed to store audit trail:', auditError);
+        throw new Error('Failed to store audit trail');
+      }
+      
+      console.log('✅ Initial audit trail stored:', auditResult);
+      
+      // Update audit data with server-side signature timestamp
+      if (auditResult?.signatureSubmittedAt) {
+        auditData.signatureSubmittedAt = auditResult.signatureSubmittedAt;
+        console.log('✅ Server signature timestamp received:', auditResult.signatureSubmittedAt);
+      }
+
+      // STEP 2: Generate signed contract with audit trail (now includes server timestamp)
       if (import.meta.env.DEV) {
         toast({
           title: "יוצר הסכם חתום...",
@@ -487,21 +508,22 @@ export const SignaturePage: React.FC = () => {
       auditData.pdfStoragePath = contractFileName;
       auditData.pdfPublicUrl = contractUrl;
 
-      // Store audit trail in database
-      console.log('📋 Storing audit trail in database...');
-      const { data: auditResult, error: auditError } = await supabase.functions.invoke('store-audit-trail', {
-        body: auditData
+      // STEP 3: Update audit trail with PDF info
+      console.log('📋 Updating audit trail with PDF info...');
+      const { data: updateResult, error: updateError } = await supabase.functions.invoke('store-audit-trail', {
+        body: {
+          auditTrailId: auditResult.auditTrailId,
+          pdfHash: auditData.pdfHash,
+          pdfStoragePath: auditData.pdfStoragePath,
+          pdfPublicUrl: auditData.pdfPublicUrl,
+        }
       });
 
-      if (auditError) {
-        console.error('❌ Failed to store audit trail:', auditError);
-        // Don't fail the whole process for audit trail error
+      if (updateError) {
+        console.error('❌ Failed to update audit trail with PDF info:', updateError);
+        // Don't fail the whole process for this
       } else {
-        console.log('✅ Audit trail stored:', auditResult);
-        // Update with server-side signature timestamp
-        if (auditResult?.signatureSubmittedAt) {
-          auditData.signatureSubmittedAt = auditResult.signatureSubmittedAt;
-        }
+        console.log('✅ Audit trail updated with PDF info:', updateResult);
       }
 
       // Send signature and contract to Fireberry
