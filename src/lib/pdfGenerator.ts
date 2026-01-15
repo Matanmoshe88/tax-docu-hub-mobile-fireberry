@@ -62,7 +62,7 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0; font-weight: bold; width: 180px;">🔒 SMS נשלח:</td>
             <td style="padding: 8px 0;">
               <div style="font-weight: bold;">${smsSentTimeFormatted}</div>
-              <div style="font-size: 11px; color: #059669; margin-top: 2px;">(נשלח על ידי צד ג׳)</div>
+              <div style="font-size: 11px; color: #059669; margin-top: 2px;">(נשלח על ידי צד ג׳ - InforUMobile)</div>
               ${auditData.smsProviderStatusId !== undefined && auditData.smsProviderStatusId !== null ? `
               <div style="font-size: 10px; color: #059669; margin-top: 2px;">סטטוס: ${auditData.smsProviderStatusId} - ${auditData.smsProviderStatusDescription || 'Success'}</div>
               ` : ''}
@@ -124,12 +124,6 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
             <td style="padding: 8px 0; font-weight: bold; color: #2563eb;">${auditData.signatureTime}</td>
           </tr>
           ` : ''}
-          ${auditData.timeSpentReadingSeconds !== null && auditData.timeSpentReadingSeconds !== undefined ? `
-          <tr>
-            <td style="padding: 8px 0; font-weight: bold;">זמן קריאה לפני חתימה:</td>
-            <td style="padding: 8px 0;">${timeSpentFormatted}</td>
-          </tr>
-          ` : ''}
         </table>
       </div>
 
@@ -172,12 +166,9 @@ const generateAuditTrailHTML = (auditData: AuditData): string => {
 
       <!-- Legal Declaration -->
       <div style="margin-top: 30px; padding: 20px; background: #eff6ff; border: 2px solid #2563eb; border-radius: 8px; page-break-inside: avoid; break-inside: avoid;">
-        <h3 style="color: #1e40af; font-size: 14px; margin-bottom: 10px;">📜 הצהרה משפטית</h3>
+        <h3 style="color: #1e40af; font-size: 14px; margin-bottom: 10px;">📜 תהליך חתימה</h3>
         <p style="font-size: 12px; color: #1e3a5f; line-height: 1.8; margin: 0;">
-          פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על ההסכם. חותמות הזמן המסומנות ב-🔒 התקבלו מצד ג׳ ולא ניתן לשנותן.
-        </p>
-        <p style="font-size: 11px; color: #64748b; margin-top: 10px; margin-bottom: 0;">
-          Timestamps marked with 🔒 are 3rd-party verified and cannot be altered.
+          פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על ההסכם.
         </p>
       </div>
 
