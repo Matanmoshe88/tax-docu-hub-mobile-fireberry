@@ -31,6 +31,7 @@ export const SignaturePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSigned, setIsSigned] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
+  const [accessValidated, setAccessValidated] = useState(false);
   const { toast } = useToast();
 
   // Disable browser back button completely
@@ -52,6 +53,52 @@ export const SignaturePage: React.FC = () => {
       window.removeEventListener('popstate', handlePopState);
     };
   }, [toast]);
+
+  // Access validation guard - check contract page entry and OTP verification
+  useEffect(() => {
+    const validateAccess = async () => {
+      // Check if contract page was visited (required for audit trail)
+      const contractPageEntry = sessionStorage.getItem('audit_contract_page_entry');
+      if (!contractPageEntry) {
+        toast({
+          title: "יש לקרוא את ההסכם",
+          description: "יש לעבור דרך עמוד ההסכם לפני החתימה",
+          variant: "destructive"
+        });
+        navigate(`/contract/${recordId}`);
+        return;
+      }
+
+      try {
+        // Check OTP setting
+        const { data } = await supabase.functions.invoke('get-settings', { body: null });
+        const otpEnabled = data?.settings?.find((s: any) => s.setting_key === 'otp_enabled')?.setting_value?.enabled ?? true;
+        
+        // Check if OTP was verified (using the audit trail key)
+        const otpVerificationTime = sessionStorage.getItem('audit_otp_verification_time');
+        
+        if (otpEnabled && !otpVerificationTime) {
+          toast({
+            title: "נדרש אימות טלפון",
+            description: "יש לאמת את מספר הטלפון לפני החתימה",
+            variant: "destructive"
+          });
+          navigate(`/contract/${recordId}`);
+          return;
+        }
+        
+        setAccessValidated(true);
+      } catch (error) {
+        console.error('Error validating access:', error);
+        // On error, redirect to be safe
+        navigate(`/contract/${recordId}`);
+      }
+    };
+    
+    if (recordId) {
+      validateAccess();
+    }
+  }, [recordId, navigate, toast]);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -434,6 +481,18 @@ export const SignaturePage: React.FC = () => {
   const handlePrevious = () => {
     navigate(`/contract/${recordId}`);
   };
+
+  // Show loading while validating access
+  if (!accessValidated) {
+    return (
+      <PortalLayout currentStep={2} totalSteps={4} nextLabel="מאמת..." onNext={() => {}}>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">מאמת הרשאות גישה...</p>
+        </div>
+      </PortalLayout>
+    );
+  }
 
   return (
     <>
