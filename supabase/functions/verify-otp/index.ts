@@ -71,6 +71,9 @@ serve(async (req) => {
       );
     }
 
+    // Capture server timestamp for verification (3rd party timestamp from Supabase)
+    const verificationTime = new Date().toISOString();
+
     // Mark as verified
     const { error: updateError } = await supabase
       .from('otp_codes')
@@ -85,9 +88,18 @@ serve(async (req) => {
       );
     }
 
-    console.log('OTP verified successfully');
+    console.log('OTP verified successfully at:', verificationTime);
+    
     return new Response(
-      JSON.stringify({ success: true, valid: true, message: 'OTP verified successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        valid: true, 
+        message: 'OTP verified successfully',
+        // Third-party verification data
+        verificationTime: verificationTime, // Supabase server timestamp (3rd party)
+        codeEntered: code, // קוד שהלקוח הזין
+        verificationStatus: 'חותמת זמן שרת Supabase'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

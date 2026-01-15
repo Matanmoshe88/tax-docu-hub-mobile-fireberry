@@ -10,13 +10,21 @@ export interface AuditData {
   clientPhone: string;
   maskedPhone: string;
   
-  // Phone Verification
-  otpVerificationTime: string | null;
+  // Phone Verification - SMS Sending (InforUMobile 3rd party)
+  smsSentTime: string | null;
+  smsMessageId: string | null;
+  smsProviderStatus: string | null;
+  
+  // Phone Verification - OTP Entry & Verification
+  otpCodeEntered: string | null;
   otpVerified: boolean;
+  otpVerificationTime: string | null;
   
   // Document Timeline
   contractPageEntryTime: string | null;
+  contractViewedAt: string | null; // ISO timestamp for DB
   signatureTime: string;
+  signatureSubmittedAt: string | null; // Server timestamp (3rd party)
   timeSpentReadingSeconds: number | null;
   
   // Device & Session Info
@@ -29,19 +37,36 @@ export interface AuditData {
   timezone: string;
   language: string;
   
-  // Document Integrity
+  // Document Integrity (SHA256 hashes of actual bytes)
+  pdfHash: string | null;
+  signatureHash: string | null;
+  
+  // Legacy hashes (for PDF display, based on text content)
   documentHash: string;
-  signatureHash: string;
+  legacySignatureHash: string;
+  
+  // Storage References
+  pdfStoragePath: string | null;
+  signatureStoragePath: string | null;
+  pdfPublicUrl: string | null;
+  signaturePublicUrl: string | null;
   
   // Record Reference
   recordId: string;
+  documentId: string | null;
 }
 
 // Session storage keys
 const AUDIT_KEYS = {
   OTP_VERIFICATION_TIME: 'audit_otp_verification_time',
+  OTP_VERIFICATION_TIME_ISO: 'audit_otp_verification_time_iso',
   CONTRACT_PAGE_ENTRY: 'audit_contract_page_entry',
+  CONTRACT_VIEWED_AT_ISO: 'audit_contract_viewed_at_iso',
   OTP_PHONE: 'audit_otp_phone',
+  SMS_SENT_TIME: 'audit_sms_sent_time',
+  SMS_MESSAGE_ID: 'audit_sms_message_id',
+  SMS_PROVIDER_STATUS: 'audit_sms_provider_status',
+  OTP_CODE_ENTERED: 'audit_otp_code_entered',
 } as const;
 
 /**
@@ -112,12 +137,23 @@ export function maskIpAddress(ip: string): string {
 }
 
 /**
- * Generate SHA-256 hash of content
+ * Generate SHA-256 hash of string content
  */
 export async function generateHash(content: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(content);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
+
+/**
+ * Generate SHA-256 hash from binary data (ArrayBuffer or Uint8Array)
+ * This is used for hashing actual file bytes (PDF, images)
+ */
+export async function generateHashFromBytes(bytes: ArrayBuffer): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   return hashHex;
@@ -182,7 +218,45 @@ export function captureDeviceInfo(): {
 }
 
 /**
- * Store OTP verification timestamp
+ * Store SMS sent data from InforUMobile response (3rd party)
+ */
+export function storeSmsData(smsSentTime: string, messageId: string | null, providerStatus: string): void {
+  sessionStorage.setItem(AUDIT_KEYS.SMS_SENT_TIME, smsSentTime);
+  if (messageId) {
+    sessionStorage.setItem(AUDIT_KEYS.SMS_MESSAGE_ID, messageId);
+  }
+  sessionStorage.setItem(AUDIT_KEYS.SMS_PROVIDER_STATUS, providerStatus);
+}
+
+/**
+ * Get stored SMS sent time
+ */
+export function getSmsData(): { smsSentTime: string | null; smsMessageId: string | null; smsProviderStatus: string | null } {
+  return {
+    smsSentTime: sessionStorage.getItem(AUDIT_KEYS.SMS_SENT_TIME),
+    smsMessageId: sessionStorage.getItem(AUDIT_KEYS.SMS_MESSAGE_ID),
+    smsProviderStatus: sessionStorage.getItem(AUDIT_KEYS.SMS_PROVIDER_STATUS),
+  };
+}
+
+/**
+ * Store OTP verification data from server response (3rd party)
+ */
+export function storeOtpVerificationData(
+  phone: string, 
+  verificationTime: string, 
+  codeEntered: string
+): void {
+  // Store display time
+  sessionStorage.setItem(AUDIT_KEYS.OTP_VERIFICATION_TIME, getIsraelTimestamp());
+  // Store ISO time from server (3rd party timestamp)
+  sessionStorage.setItem(AUDIT_KEYS.OTP_VERIFICATION_TIME_ISO, verificationTime);
+  sessionStorage.setItem(AUDIT_KEYS.OTP_PHONE, phone);
+  sessionStorage.setItem(AUDIT_KEYS.OTP_CODE_ENTERED, codeEntered);
+}
+
+/**
+ * Legacy: Store OTP verification timestamp (for backward compatibility)
  */
 export function storeOtpVerificationTime(phone: string): void {
   sessionStorage.setItem(AUDIT_KEYS.OTP_VERIFICATION_TIME, getIsraelTimestamp());
@@ -190,24 +264,42 @@ export function storeOtpVerificationTime(phone: string): void {
 }
 
 /**
- * Get stored OTP verification timestamp
+ * Get stored OTP verification timestamp (display format)
  */
 export function getOtpVerificationTime(): string | null {
   return sessionStorage.getItem(AUDIT_KEYS.OTP_VERIFICATION_TIME);
 }
 
 /**
- * Store contract page entry timestamp
+ * Get stored OTP verification data
+ */
+export function getOtpVerificationData(): { 
+  verificationTime: string | null; 
+  verificationTimeIso: string | null;
+  codeEntered: string | null;
+  phone: string | null;
+} {
+  return {
+    verificationTime: sessionStorage.getItem(AUDIT_KEYS.OTP_VERIFICATION_TIME),
+    verificationTimeIso: sessionStorage.getItem(AUDIT_KEYS.OTP_VERIFICATION_TIME_ISO),
+    codeEntered: sessionStorage.getItem(AUDIT_KEYS.OTP_CODE_ENTERED),
+    phone: sessionStorage.getItem(AUDIT_KEYS.OTP_PHONE),
+  };
+}
+
+/**
+ * Store contract page entry timestamp with server-like ISO format
  */
 export function storeContractPageEntry(): void {
   // Only store if not already stored (first entry)
   if (!sessionStorage.getItem(AUDIT_KEYS.CONTRACT_PAGE_ENTRY)) {
     sessionStorage.setItem(AUDIT_KEYS.CONTRACT_PAGE_ENTRY, Date.now().toString());
+    sessionStorage.setItem(AUDIT_KEYS.CONTRACT_VIEWED_AT_ISO, new Date().toISOString());
   }
 }
 
 /**
- * Get contract page entry timestamp
+ * Get contract page entry timestamp (display format)
  */
 export function getContractPageEntryTime(): string | null {
   const entryMs = sessionStorage.getItem(AUDIT_KEYS.CONTRACT_PAGE_ENTRY);
@@ -223,6 +315,13 @@ export function getContractPageEntryTime(): string | null {
     minute: '2-digit',
     second: '2-digit',
   });
+}
+
+/**
+ * Get contract viewed at ISO timestamp
+ */
+export function getContractViewedAtIso(): string | null {
+  return sessionStorage.getItem(AUDIT_KEYS.CONTRACT_VIEWED_AT_ISO);
 }
 
 /**
@@ -246,6 +345,22 @@ export function formatDuration(seconds: number): string {
   const remainingSeconds = seconds % 60;
   if (remainingSeconds === 0) return `${minutes} דקות`;
   return `${minutes} דקות ו-${remainingSeconds} שניות`;
+}
+
+/**
+ * Format ISO timestamp to Israel display format
+ */
+export function formatIsoToIsrael(isoTimestamp: string): string {
+  const date = new Date(isoTimestamp);
+  return date.toLocaleString('he-IL', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 /**

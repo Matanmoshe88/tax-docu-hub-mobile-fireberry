@@ -14,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_trails: {
+        Row: {
+          browser_name: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          contract_viewed_at: string | null
+          created_at: string
+          document_id: string | null
+          id: string
+          ip_address: string | null
+          language: string | null
+          masked_ip_address: string | null
+          masked_phone: string | null
+          operating_system: string | null
+          otp_code_entered: string | null
+          otp_verification_time: string | null
+          otp_verified: boolean | null
+          pdf_hash: string | null
+          pdf_public_url: string | null
+          pdf_storage_path: string | null
+          record_id: string
+          screen_resolution: string | null
+          signature_hash: string | null
+          signature_public_url: string | null
+          signature_storage_path: string | null
+          signature_submitted_at: string | null
+          sms_provider_message_id: string | null
+          sms_provider_status: string | null
+          sms_sent_time: string | null
+          time_spent_reading_seconds: number | null
+          timezone: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          browser_name?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          contract_viewed_at?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          ip_address?: string | null
+          language?: string | null
+          masked_ip_address?: string | null
+          masked_phone?: string | null
+          operating_system?: string | null
+          otp_code_entered?: string | null
+          otp_verification_time?: string | null
+          otp_verified?: boolean | null
+          pdf_hash?: string | null
+          pdf_public_url?: string | null
+          pdf_storage_path?: string | null
+          record_id: string
+          screen_resolution?: string | null
+          signature_hash?: string | null
+          signature_public_url?: string | null
+          signature_storage_path?: string | null
+          signature_submitted_at?: string | null
+          sms_provider_message_id?: string | null
+          sms_provider_status?: string | null
+          sms_sent_time?: string | null
+          time_spent_reading_seconds?: number | null
+          timezone?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          browser_name?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          contract_viewed_at?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          ip_address?: string | null
+          language?: string | null
+          masked_ip_address?: string | null
+          masked_phone?: string | null
+          operating_system?: string | null
+          otp_code_entered?: string | null
+          otp_verification_time?: string | null
+          otp_verified?: boolean | null
+          pdf_hash?: string | null
+          pdf_public_url?: string | null
+          pdf_storage_path?: string | null
+          record_id?: string
+          screen_resolution?: string | null
+          signature_hash?: string | null
+          signature_public_url?: string | null
+          signature_storage_path?: string | null
+          signature_submitted_at?: string | null
+          sms_provider_message_id?: string | null
+          sms_provider_status?: string | null
+          sms_sent_time?: string | null
+          time_spent_reading_seconds?: number | null
+          timezone?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       otp_codes: {
         Row: {
           code: string

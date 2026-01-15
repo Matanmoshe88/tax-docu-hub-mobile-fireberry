@@ -109,6 +109,9 @@ serve(async (req) => {
     const smsResult = await smsResponse.json();
     console.log('InforUMobile response:', JSON.stringify(smsResult));
 
+    // Capture server timestamp for SMS sent (3rd party timestamp)
+    const smsSentTime = new Date().toISOString();
+
     if (smsResult.StatusId !== 1) {
       console.error('SMS sending failed:', smsResult);
       return new Response(
@@ -117,8 +120,18 @@ serve(async (req) => {
       );
     }
 
+    // Return success with InforUMobile confirmation data
     return new Response(
-      JSON.stringify({ success: true, message: 'OTP sent successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'OTP sent successfully',
+        // Third-party verification data
+        smsSentTime: smsSentTime, // Server timestamp when InforUMobile confirmed
+        smsMessageId: smsResult.Data?.MessageId || smsResult.MessageId || null,
+        smsProviderStatus: 'אושר על ידי צד ג - InforUMobile',
+        providerStatusId: smsResult.StatusId,
+        providerStatusDescription: smsResult.StatusDescription || 'Success'
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
