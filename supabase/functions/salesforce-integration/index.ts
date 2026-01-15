@@ -11,6 +11,7 @@ interface DocumentUploadRequest {
   signatureUrl: string;
   contractUrl: string;
   documentId?: string; // Add optional documentId for updating existing documents
+  auditTrailId?: string; // Audit trail UUID to store in Fireberry
 }
 
 async function testFireberryAPI(): Promise<any> {
@@ -52,7 +53,8 @@ async function testFireberryAPI(): Promise<any> {
 async function updateExistingDocument(
   documentId: string,
   signatureUrl: string,
-  contractUrl: string
+  contractUrl: string,
+  auditTrailId?: string
 ): Promise<any> {
   console.log(`🔄 Updating existing document ${documentId} in Fireberry`);
   
@@ -64,7 +66,8 @@ async function updateExistingDocument(
   // Update JSON payload - only signature and contract fields
   const payload = {
     pcfsystemfield975: signatureUrl, // signature field
-    pcfsystemfield725: contractUrl   // contract field
+    pcfsystemfield725: contractUrl,  // contract field
+    ...(auditTrailId && { pcftrailid: auditTrailId }) // audit trail ID
   };
 
   if (Deno.env.get('ENVIRONMENT') === 'development') {
@@ -95,7 +98,8 @@ async function updateExistingDocument(
 async function uploadDocumentToFireberry(
   recordId: string,
   signatureUrl: string,
-  contractUrl: string
+  contractUrl: string,
+  auditTrailId?: string
 ): Promise<any> {
   console.log(`🔄 Creating new document record in Fireberry for record: ${recordId}`);
   
@@ -109,7 +113,8 @@ async function uploadDocumentToFireberry(
     pcfsystemfield693: recordId,
     name: 'חוזה חתום - מס הכנסה',
     pcfsystemfield975: signatureUrl,
-    pcfsystemfield725: contractUrl
+    pcfsystemfield725: contractUrl,
+    ...(auditTrailId && { pcftrailid: auditTrailId }) // audit trail ID
   };
 
   if (Deno.env.get('ENVIRONMENT') === 'development') {
@@ -165,7 +170,7 @@ serve(async (req) => {
       console.log('📝 Request body:', JSON.stringify(body, null, 2));
     }
 
-    const { recordId, signatureUrl, contractUrl, documentId } = body;
+    const { recordId, signatureUrl, contractUrl, documentId, auditTrailId } = body;
 
     // Check if this is a test request
     if (recordId === 'TEST') {
@@ -192,11 +197,11 @@ serve(async (req) => {
     if (documentId) {
       // Update existing document
       console.log('🔄 Using existing document ID:', documentId);
-      uploadResult = await updateExistingDocument(documentId, signatureUrl, contractUrl);
+      uploadResult = await updateExistingDocument(documentId, signatureUrl, contractUrl, auditTrailId);
     } else {
       // Create new document (fallback for backward compatibility)
       console.log('🔄 No document ID provided, creating new document');
-      uploadResult = await uploadDocumentToFireberry(recordId, signatureUrl, contractUrl);
+      uploadResult = await uploadDocumentToFireberry(recordId, signatureUrl, contractUrl, auditTrailId);
     }
 
     const response = {
