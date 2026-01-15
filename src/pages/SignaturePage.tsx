@@ -216,7 +216,7 @@ export const SignaturePage: React.FC = () => {
     return publicUrl;
   };
 
-  const callFireberryIntegration = async (signatureUrl: string, contractUrl: string) => {
+  const callFireberryIntegration = async (signatureUrl: string, contractUrl: string, auditTrailId?: string) => {
     if (import.meta.env.DEV) {
       console.log('🔄 Calling Fireberry integration...');
     }
@@ -226,7 +226,8 @@ export const SignaturePage: React.FC = () => {
         recordId: recordId,
         signatureUrl,
         contractUrl,
-        documentId: documentId // Use existing document ID
+        documentId: documentId, // Use existing document ID
+        auditTrailId // Pass audit trail ID
       }
     });
 
@@ -534,7 +535,7 @@ export const SignaturePage: React.FC = () => {
         });
       }
       
-      const fireberryResult = await callFireberryIntegration(signatureUrl, contractUrl);
+      const fireberryResult = await callFireberryIntegration(signatureUrl, contractUrl, auditResult.auditTrailId);
       if (import.meta.env.DEV) {
         console.log('✅ Documents uploaded to Fireberry:', fireberryResult);
       }
