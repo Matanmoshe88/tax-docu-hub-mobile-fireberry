@@ -12,8 +12,9 @@ import {
   Lock,
   Unlock,
   Eye,
-   Download,
-   FileSignature
+  Download,
+  FileSignature,
+  PenTool
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createAndDownloadPDF } from '@/lib/pdfGenerator';
@@ -582,7 +583,7 @@ export const DocumentsPage: React.FC = () => {
            {/* POA TaxAuth Signable Document Card */}
            <Card 
              className={`shadow-card hover:shadow-lg transition-all cursor-pointer ${
-               poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'hover:ring-2 hover:ring-primary/20'
+               poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'ring-2 ring-primary/30 bg-primary/5 hover:ring-primary/50'
              }`}
              onClick={() => !poaSigned && setPoaModalOpen(true)}
            >
@@ -601,16 +602,27 @@ export const DocumentsPage: React.FC = () => {
                            <Badge variant="success" className="text-xs">נחתם</Badge>
                          )}
                        </div>
-                       <p className="text-muted-foreground text-sm mt-1">
-                         {poaSigned ? 'המסמך נחתם בהצלחה' : 'לחץ לצפייה וחתימה דיגיטלית'}
-                       </p>
-                       <div className="text-xs text-muted-foreground mt-2">
-                         נדרש
-                       </div>
+                       {poaSigned ? (
+                         <p className="text-muted-foreground text-sm mt-1">המסמך נחתם בהצלחה</p>
+                       ) : (
+                         <div className="flex items-center gap-2 mt-1">
+                           <PenTool className="h-4 w-4 text-primary" />
+                           <span className="text-primary font-medium text-sm">לחץ לחתימה</span>
+                         </div>
+                       )}
+                       {!poaSigned && (
+                         <Badge variant="outline" className="text-xs mt-2 border-primary/30 text-primary">
+                           נדרש חתימה
+                         </Badge>
+                       )}
                      </div>
                      
-                     {poaSigned && (
+                     {poaSigned ? (
                        <Lock className="h-5 w-5 text-success" />
+                     ) : (
+                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                         <PenTool className="h-4 w-4 text-primary" />
+                       </div>
                      )}
                    </div>
                  </div>
