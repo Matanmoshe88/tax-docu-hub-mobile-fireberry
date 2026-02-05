@@ -1,12 +1,18 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle } from 'lucide-react';
+import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface SignableDocumentModalProps {
   open: boolean;
@@ -33,8 +39,10 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   const [hasSignature, setHasSignature] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfData, setPdfData] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const { toast } = useToast();
 
   // Fetch real PDF from generate-poa-pdf edge function
@@ -54,11 +62,9 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
           if (error) throw error;
           if (!data.success) throw new Error(data.error || 'Failed to generate PDF');
 
-          // Use data URL directly - Chrome blocks blob URLs in iframes
-          const dataUrl = `data:application/pdf;base64,${data.data.pdf}`;
-
+          // Store base64 data for react-pdf
           console.log('✅ PDF loaded successfully');
-          setPdfBlobUrl(dataUrl);
+          setPdfData(data.data.pdf);
         } catch (err) {
           console.error('❌ PDF fetch error:', err);
           setPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
@@ -71,8 +77,10 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     } else if (!open) {
       // Reset state when modal closes
       setHasSignature(false);
-      setPdfBlobUrl(null);
+      setPdfData(null);
       setPdfError(null);
+      setCurrentPage(1);
+      setNumPages(0);
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -277,12 +285,53 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
                 נסה שוב
               </Button>
             </div>
-          ) : pdfBlobUrl ? (
-            <iframe
-              src={pdfBlobUrl + '#toolbar=1&navpanes=0'}
-              className="w-full h-full min-h-[400px] rounded-lg border bg-white"
-              title="יפוי כח מס הכנסה"
-            />
+          ) : pdfData ? (
+            <div className="flex flex-col items-center">
+              <Document
+                file={`data:application/pdf;base64,${pdfData}`}
+                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                onLoadError={(error) => {
+                  console.error('PDF load error:', error);
+                  setPdfError('שגיאה בטעינת המסמך');
+                }}
+                loading={
+                  <div className="flex items-center justify-center min-h-[300px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                }
+                className="max-w-full"
+              >
+                <Page 
+                  pageNumber={currentPage} 
+                  width={500}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                />
+              </Document>
+              {numPages > 1 && (
+                <div className="flex items-center gap-4 mt-4 pb-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm">
+                    עמוד {currentPage} מתוך {numPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))}
+                    disabled={currentPage >= numPages}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           ) : null}
         </div>
  
