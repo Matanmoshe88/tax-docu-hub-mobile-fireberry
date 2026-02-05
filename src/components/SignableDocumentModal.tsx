@@ -307,12 +307,8 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
                 </div>}
             </div>
  
-            {/* Buttons - centered on mobile */}
-            <div className="flex justify-center sm:justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={clearSignature} disabled={!hasSignature || isSubmitting} className="gap-1">
-                <RotateCcw className="h-4 w-4" />
-                נקה
-              </Button>
+            {/* Buttons - חתום ושלח centered, נקה on right */}
+            <div className="relative flex items-center justify-center">
               <Button onClick={handleSign} disabled={!hasSignature || isSubmitting || isLoadingPdf} size="sm" className="gap-1">
                 {isSubmitting ? <>
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -321,6 +317,10 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
                     <Check className="h-4 w-4" />
                     חתום ושלח
                   </>}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearSignature} disabled={!hasSignature || isSubmitting} className="gap-1 absolute left-0">
+                <RotateCcw className="h-4 w-4" />
+                נקה
               </Button>
             </div>
           </div>
