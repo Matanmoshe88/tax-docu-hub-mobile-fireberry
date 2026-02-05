@@ -567,11 +567,6 @@ export const DocumentsPage: React.FC = () => {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="bg-primary/10 p-4 rounded-full">
-              <Upload className="h-8 w-8 text-primary" />
-            </div>
-          </div>
           <h1 className="text-3xl font-bold text-foreground">העלאת מסמכים</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             אנא העלה את המסמכים הנדרשים. הקבצים נשמרים בצורה מוצפנת ובטוחה.
