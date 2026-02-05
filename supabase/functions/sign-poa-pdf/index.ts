@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v4.1.0-font-debug";
+const VERSION = "v5.0.0-no-reverse";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,12 +63,10 @@ function formatDuration(seconds: number): string {
 }
 
 // Process text for RTL Hebrew display in PDF
-// pdf-lib doesn't natively support RTL, so we reverse the entire string
-// This is a simple approach that works for pure Hebrew or simple mixed text
+// Modern PDF viewers handle RTL automatically - no reversal needed
 function processHebrewText(text: string): string {
-  // Simply reverse the entire string for RTL display
-  // This works because pdf-lib renders left-to-right
-  return text.split('').reverse().join('');
+  // Don't reverse - let the PDF viewer handle RTL
+  return text;
 }
 
 // Draw audit trail page on the PDF with Hebrew font support
