@@ -292,21 +292,20 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
  
         {/* Sticky Signature Footer */}
         <div className="shrink-0 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 space-y-3">
-          {/* Signature pad and buttons row */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+          {/* Signature pad and buttons */}
+          <div className="flex flex-col gap-3">
             {/* Signature Canvas */}
-            <div className="flex-1 relative">
-              
-              <canvas ref={canvasRef} width={400} height={150} className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white touch-none cursor-crosshair" style={{
-              height: '120px'
-            }} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
-              {!hasSignature && <div className="absolute bottom-0 left-0 right-0 h-[120px] flex items-center justify-center pointer-events-none">
+            <div className="relative">
+              <canvas ref={canvasRef} width={400} height={200} className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white touch-none cursor-crosshair" style={{
+                height: '160px'
+              }} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
+              {!hasSignature && <div className="absolute bottom-0 left-0 right-0 h-[160px] flex items-center justify-center pointer-events-none">
                   <p className="text-muted-foreground/50 text-sm">חתום כאן</p>
                 </div>}
             </div>
  
-            {/* Buttons */}
-            <div className="flex sm:flex-col gap-2 sm:justify-end shrink-0">
+            {/* Buttons - centered on mobile */}
+            <div className="flex justify-center sm:justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={clearSignature} disabled={!hasSignature || isSubmitting} className="gap-1">
                 <RotateCcw className="h-4 w-4" />
                 נקה
