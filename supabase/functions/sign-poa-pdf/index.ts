@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { PDFDocument, rgb, StandardFonts, PDFFont } from "npm:pdf-lib@1.17.1";
-import fontkit from "npm:@pdf-lib/fontkit@1.1.1";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pdf-lib@1.17.1?pin=v135";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -279,7 +279,7 @@ serve(async (req) => {
     pdfDoc.registerFontkit(fontkit);
 
     // Load Hebrew font from Supabase storage (for audit trail)
-    let hebrewFont: PDFFont;
+    let hebrewFont: PDFFont | null = null;
     let latinFont: PDFFont;
     let latinBoldFont: PDFFont;
 
