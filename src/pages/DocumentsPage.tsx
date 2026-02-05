@@ -567,6 +567,11 @@ export const DocumentsPage: React.FC = () => {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <Upload className="h-8 w-8 text-primary" />
+            </div>
+          </div>
           <h1 className="text-3xl font-bold text-foreground">העלאת מסמכים</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             אנא העלה את המסמכים הנדרשים. הקבצים נשמרים בצורה מוצפנת ובטוחה.
@@ -578,17 +583,14 @@ export const DocumentsPage: React.FC = () => {
            {/* POA TaxAuth Signable Document Card */}
            <Card 
              className={`shadow-card hover:shadow-lg transition-all cursor-pointer ${
-                 poaSigned ? 'ring-2 ring-success/20 bg-success/5' : ''
+               poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'ring-2 ring-primary/30 bg-primary/5 hover:ring-primary/50'
              }`}
              onClick={() => !poaSigned && setPoaModalOpen(true)}
            >
              <CardContent className="p-6">
                <div className="flex items-start gap-4">
-                   <div className={`p-3 rounded-lg ${poaSigned ? 'bg-success/10 text-success' : 'bg-blue-50'}`}>
-                     <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke={poaSigned ? "currentColor" : "#2563eb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                       <path d="M3 17c3.333-3.333 5-5 5-5s2.5 3 5 0 5-5 5-5" />
-                       <path d="M3 21c3.333-3.333 5-5 5-5s2.5 3 5 0 5-5 5-5" />
-                     </svg>
+                 <div className={`p-3 rounded-lg ${poaSigned ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
+                   <FileSignature className="h-6 w-6" />
                  </div>
                  
                  <div className="flex-1">
@@ -603,14 +605,24 @@ export const DocumentsPage: React.FC = () => {
                        {poaSigned ? (
                          <p className="text-muted-foreground text-sm mt-1">המסמך נחתם בהצלחה</p>
                        ) : (
-                           <p className="text-muted-foreground text-sm mt-1">לחץ לחתימה</p>
+                         <div className="flex items-center gap-2 mt-1">
+                           <PenTool className="h-4 w-4 text-primary" />
+                           <span className="text-primary font-medium text-sm">לחץ לחתימה</span>
+                         </div>
+                       )}
+                       {!poaSigned && (
+                         <Badge variant="outline" className="text-xs mt-2 border-primary/30 text-primary">
+                           נדרש חתימה
+                         </Badge>
                        )}
                      </div>
                      
                      {poaSigned ? (
                        <Lock className="h-5 w-5 text-success" />
                      ) : (
-                         <Badge variant="outline" className="text-xs">נדרש</Badge>
+                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                         <PenTool className="h-4 w-4 text-primary" />
+                       </div>
                      )}
                    </div>
                  </div>
