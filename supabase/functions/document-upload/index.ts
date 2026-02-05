@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface DocumentUpdateRequest {
   docid: string;
-  documentType: 'id_photo' | 'bank_statement' | 'appendix' | 'drivers_license';
+   documentType: 'id_photo' | 'bank_statement' | 'appendix' | 'drivers_license' | 'poa_tax_auth';
   documentUrl: string;
 }
 
@@ -17,7 +17,8 @@ const DOCUMENT_FIELD_MAPPING = {
   'id_photo': 'pcfsystemfield719',
   'bank_statement': 'pcfsystemfield967', 
   'appendix': 'pcfsystemfield977',
-  'drivers_license': 'pcfsystemfield978'
+   'drivers_license': 'pcfsystemfield978',
+   'poa_tax_auth': 'pcfsystemfield717'
 };
 
 async function updateDocumentUrl(
