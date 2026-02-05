@@ -260,8 +260,8 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       body: {
         pdfBase64: unsignedPdfBase64,
         signatureDataUrl,
-        signaturePosition: { x: 257, y: 430 },
-        signatureSize: { width: 120, height: 60 },
+        signaturePosition: { x: 257, y: 560 },
+        signatureSize: { width: 150, height: 75 },
         auditData
       }
     });
