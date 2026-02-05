@@ -1,42 +1,49 @@
 
 
-# Clarity User Identification with Israeli ID Number
+# Add generate-poa-pdf Edge Function to Codebase
 
 ## Overview
-Add Microsoft Clarity's Identify API call to tag session recordings with the client's Israeli ID number (תעודת זהות), enabling you to search for specific client recordings.
+Add the `generate-poa-pdf` edge function code to the project's `supabase/functions/` directory so it's synced with the codebase. This function generates Power of Attorney PDF (Form 2279/א5) by invoking an AWS Lambda function.
 
-## Technical Implementation
+## What the Function Does
+- Receives a Fireberry Opportunity `recordId`
+- Invokes AWS Lambda (`powerOfAttorneyPdfGenerator`) to generate the POA PDF
+- Returns base64-encoded PDF or URL based on `responseType` parameter
 
-### File: `src/hooks/useFireberryData.ts`
+## Implementation
 
-**Location**: After line 212 (after `setIsDataFresh(true)`)
+### 1. Create Edge Function File
+**File**: `supabase/functions/generate-poa-pdf/index.ts`
 
-**Code to add**:
-```typescript
-// Identify user in Microsoft Clarity for session tracking
-if (typeof window !== 'undefined' && (window as any).clarity && updatedClientData.idNumber) {
-  const fullName = `${updatedClientData.firstName} ${updatedClientData.lastName}`.trim();
-  (window as any).clarity("identify", updatedClientData.idNumber, null, null, fullName || "Unknown");
-  console.log('📊 Clarity user identified by ID:', updatedClientData.idNumber, fullName);
-}
+Add the complete code you provided with proper documentation header.
+
+### 2. Update Config (if needed)
+**File**: `supabase/config.toml`
+
+Add configuration to disable JWT verification (since it uses CORS headers for auth):
+```toml
+[functions.generate-poa-pdf]
+verify_jwt = false
 ```
 
-## How to Search in Clarity
+## Required Secrets (Already Configured)
+The following secrets are already set in your Supabase project:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
 
-1. Go to **Clarity Dashboard** → **Recordings**
-2. Click **Filters** → **Custom User ID**
-3. Enter the client's Israeli ID number (e.g., `123456789`)
-4. View all session recordings for that client
+## API Reference
 
-## What Gets Sent to Clarity
+| Field | Description |
+|-------|-------------|
+| **Endpoint** | `POST /functions/v1/generate-poa-pdf` |
+| **Request Body** | `{ recordId: string, responseType?: "base64" \| "url" }` |
+| **Success Response** | `{ success: true, data: { pdf, filename, contentType } }` |
 
-| Field | Value | Example |
-|-------|-------|---------|
-| Custom User ID | Client's ID number | `123456789` |
-| Friendly Name | Client's full name | `ישראל ישראלי` |
-
-## Privacy Note
-- Only the ID number and name are sent to Clarity
-- Clarity automatically hashes the ID before storage
-- No phone, address, or other sensitive data is transmitted
+## Error Codes
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| MISSING_RECORD_ID | 400 | No recordId provided |
+| RECORD_NOT_FOUND | 404 | Fireberry record not found |
+| FIREBERRY_AUTH_ERROR | 401 | Fireberry authentication failed |
+| PDF_GENERATION_ERROR | 500 | Lambda failed to generate PDF |
 
