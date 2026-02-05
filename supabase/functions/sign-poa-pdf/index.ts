@@ -62,10 +62,62 @@ function formatDuration(seconds: number): string {
   return `${minutes} דקות ו-${remainingSeconds} שניות`;
 }
 
-// Simple reverse for RTL Hebrew display in PDF
-// pdf-lib doesn't support RTL, so we reverse the string for visual display
-function reverseForRTL(text: string): string {
-  return text.split('').reverse().join('');
+// Process text for RTL Hebrew display in PDF
+// pdf-lib doesn't support RTL, so we need to handle Hebrew text specially
+// This function reverses Hebrew segments while keeping Latin/numbers in correct order
+function processHebrewText(text: string): string {
+  // Check if text contains Hebrew characters
+  const hasHebrew = /[\u0590-\u05FF]/.test(text);
+  if (!hasHebrew) {
+    return text; // Pure Latin/numbers - no processing needed
+  }
+  
+  // For pure Hebrew text (no Latin/numbers), just reverse
+  const hasLatin = /[a-zA-Z0-9]/.test(text);
+  if (!hasLatin) {
+    return text.split('').reverse().join('');
+  }
+  
+  // Mixed text: split into segments, reverse Hebrew segments, then reverse order
+  const segments: { text: string; isHebrew: boolean }[] = [];
+  let currentSegment = '';
+  let currentIsHebrew: boolean | null = null;
+  
+  for (const char of text) {
+    const charIsHebrew = /[\u0590-\u05FF]/.test(char);
+    const charIsSpace = char === ' ' || char === ':';
+    
+    if (currentIsHebrew === null) {
+      currentIsHebrew = charIsHebrew;
+      currentSegment = char;
+    } else if (charIsSpace) {
+      // Spaces/colons belong to current segment
+      currentSegment += char;
+    } else if (charIsHebrew === currentIsHebrew) {
+      currentSegment += char;
+    } else {
+      // Segment type changed
+      segments.push({ text: currentSegment, isHebrew: currentIsHebrew });
+      currentSegment = char;
+      currentIsHebrew = charIsHebrew;
+    }
+  }
+  
+  // Don't forget the last segment
+  if (currentSegment) {
+    segments.push({ text: currentSegment, isHebrew: currentIsHebrew ?? false });
+  }
+  
+  // Process each segment: reverse Hebrew text within segment
+  const processedSegments = segments.map(seg => {
+    if (seg.isHebrew) {
+      return seg.text.split('').reverse().join('');
+    }
+    return seg.text;
+  });
+  
+  // Reverse the order of segments for RTL display
+  return processedSegments.reverse().join('');
 }
 
 // Draw audit trail page on the PDF with Hebrew font support
@@ -84,11 +136,11 @@ async function addAuditTrailPage(
   const lineHeight = 18;
   const rightEdge = width - margin;
   
-  // Helper to draw Hebrew text (RTL) - simple reverse for pdf-lib
+  // Helper to draw Hebrew text (RTL) - process for pdf-lib
   const drawHebrewText = (text: string, yPos: number, size: number = 11, color = rgb(0, 0, 0)) => {
-    const reversed = reverseForRTL(text);
-    const textWidth = hebrewFont.widthOfTextAtSize(reversed, size);
-    page.drawText(reversed, { x: rightEdge - textWidth, y: yPos, size, font: hebrewFont, color });
+    const processed = processHebrewText(text);
+    const textWidth = hebrewFont.widthOfTextAtSize(processed, size);
+    page.drawText(processed, { x: rightEdge - textWidth, y: yPos, size, font: hebrewFont, color });
   };
   
   // Helper to draw Latin text
