@@ -1,39 +1,42 @@
 
 
-# Microsoft Clarity Integration
+# Clarity User Identification with Israeli ID Number
 
 ## Overview
-Add Microsoft Clarity analytics tracking to the website by inserting the provided snippet into `index.html`.
+Add Microsoft Clarity's Identify API call to tag session recordings with the client's Israeli ID number (תעודת זהות), enabling you to search for specific client recordings.
 
-## What is Clarity?
-Microsoft Clarity is a free analytics tool that provides:
-- Session recordings (see how users interact with your site)
-- Heatmaps (where users click and scroll)
-- Insights on user behavior patterns
+## Technical Implementation
 
-## Changes Required
+### File: `src/hooks/useFireberryData.ts`
 
-### File: `index.html`
+**Location**: After line 212 (after `setIsDataFresh(true)`)
 
-Add the Clarity tracking script inside the `<head>` section, after the existing meta tags:
-
-```html
-<!-- Microsoft Clarity Analytics -->
-<script type="text/javascript">
-    (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-    })(window, document, "clarity", "script", "mmcpq54i6d");
-</script>
+**Code to add**:
+```typescript
+// Identify user in Microsoft Clarity for session tracking
+if (typeof window !== 'undefined' && (window as any).clarity && updatedClientData.idNumber) {
+  const fullName = `${updatedClientData.firstName} ${updatedClientData.lastName}`.trim();
+  (window as any).clarity("identify", updatedClientData.idNumber, null, null, fullName || "Unknown");
+  console.log('📊 Clarity user identified by ID:', updatedClientData.idNumber, fullName);
+}
 ```
 
-## How It Works
-- The script loads asynchronously (won't slow down page load)
-- Automatically tracks all page views across all routes
-- No additional configuration needed per route
-- Data will appear in your Clarity dashboard within a few hours
+## How to Search in Clarity
+
+1. Go to **Clarity Dashboard** → **Recordings**
+2. Click **Filters** → **Custom User ID**
+3. Enter the client's Israeli ID number (e.g., `123456789`)
+4. View all session recordings for that client
+
+## What Gets Sent to Clarity
+
+| Field | Value | Example |
+|-------|-------|---------|
+| Custom User ID | Client's ID number | `123456789` |
+| Friendly Name | Client's full name | `ישראל ישראלי` |
 
 ## Privacy Note
-Clarity automatically masks sensitive input fields by default. You can configure additional masking rules in your Clarity dashboard under Settings → Masking if needed.
+- Only the ID number and name are sent to Clarity
+- Clarity automatically hashes the ID before storage
+- No phone, address, or other sensitive data is transmitted
 
