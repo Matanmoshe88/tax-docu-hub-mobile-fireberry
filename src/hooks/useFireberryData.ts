@@ -211,6 +211,13 @@ export const useFireberryData = () => {
 
       setIsDataFresh(true);
 
+      // Identify user in Microsoft Clarity for session tracking
+      if (typeof window !== 'undefined' && (window as any).clarity && updatedClientData.idNumber) {
+        const fullName = `${updatedClientData.firstName} ${updatedClientData.lastName}`.trim();
+        (window as any).clarity("identify", updatedClientData.idNumber, null, null, fullName || "Unknown");
+        console.log('📊 Clarity user identified by ID:', updatedClientData.idNumber, fullName);
+      }
+
     } catch (error) {
       console.error('💥 Error fetching Fireberry data:', error);
       
