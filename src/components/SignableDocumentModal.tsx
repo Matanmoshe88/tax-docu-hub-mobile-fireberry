@@ -297,10 +297,10 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
             {/* Signature Canvas */}
             <div className="flex-1 relative">
               
-              <canvas ref={canvasRef} width={400} height={100} className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white touch-none cursor-crosshair" style={{
-              height: '80px'
+              <canvas ref={canvasRef} width={400} height={150} className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white touch-none cursor-crosshair" style={{
+              height: '120px'
             }} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
-              {!hasSignature && <div className="absolute bottom-0 left-0 right-0 h-[80px] flex items-center justify-center pointer-events-none">
+              {!hasSignature && <div className="absolute bottom-0 left-0 right-0 h-[120px] flex items-center justify-center pointer-events-none">
                   <p className="text-muted-foreground/50 text-sm">חתום כאן</p>
                 </div>}
             </div>
