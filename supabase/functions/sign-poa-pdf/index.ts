@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v3.0.0-test-y1000";
+const VERSION = "v4.0.0-hebrew-fix";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,61 +63,12 @@ function formatDuration(seconds: number): string {
 }
 
 // Process text for RTL Hebrew display in PDF
-// pdf-lib doesn't support RTL, so we need to handle Hebrew text specially
-// This function reverses Hebrew segments while keeping Latin/numbers in correct order
+// pdf-lib doesn't natively support RTL, so we reverse the entire string
+// This is a simple approach that works for pure Hebrew or simple mixed text
 function processHebrewText(text: string): string {
-  // Check if text contains Hebrew characters
-  const hasHebrew = /[\u0590-\u05FF]/.test(text);
-  if (!hasHebrew) {
-    return text; // Pure Latin/numbers - no processing needed
-  }
-  
-  // For pure Hebrew text (no Latin/numbers), just reverse
-  const hasLatin = /[a-zA-Z0-9]/.test(text);
-  if (!hasLatin) {
-    return text.split('').reverse().join('');
-  }
-  
-  // Mixed text: split into segments, reverse Hebrew segments, then reverse order
-  const segments: { text: string; isHebrew: boolean }[] = [];
-  let currentSegment = '';
-  let currentIsHebrew: boolean | null = null;
-  
-  for (const char of text) {
-    const charIsHebrew = /[\u0590-\u05FF]/.test(char);
-    const charIsSpace = char === ' ' || char === ':';
-    
-    if (currentIsHebrew === null) {
-      currentIsHebrew = charIsHebrew;
-      currentSegment = char;
-    } else if (charIsSpace) {
-      // Spaces/colons belong to current segment
-      currentSegment += char;
-    } else if (charIsHebrew === currentIsHebrew) {
-      currentSegment += char;
-    } else {
-      // Segment type changed
-      segments.push({ text: currentSegment, isHebrew: currentIsHebrew });
-      currentSegment = char;
-      currentIsHebrew = charIsHebrew;
-    }
-  }
-  
-  // Don't forget the last segment
-  if (currentSegment) {
-    segments.push({ text: currentSegment, isHebrew: currentIsHebrew ?? false });
-  }
-  
-  // Process each segment: reverse Hebrew text within segment
-  const processedSegments = segments.map(seg => {
-    if (seg.isHebrew) {
-      return seg.text.split('').reverse().join('');
-    }
-    return seg.text;
-  });
-  
-  // Reverse the order of segments for RTL display
-  return processedSegments.reverse().join('');
+  // Simply reverse the entire string for RTL display
+  // This works because pdf-lib renders left-to-right
+  return text.split('').reverse().join('');
 }
 
 // Draw audit trail page on the PDF with Hebrew font support
@@ -357,8 +308,10 @@ serve(async (req) => {
       }
 
       const fontBytes = await fontData.arrayBuffer();
-      hebrewFont = await pdfDoc.embedFont(fontBytes);
-      console.log('✅ Hebrew font loaded');
+      console.log('📦 Font bytes size:', fontBytes.byteLength);
+      // Disable subsetting to ensure all Hebrew glyphs are included
+      hebrewFont = await pdfDoc.embedFont(fontBytes, { subset: false });
+      console.log('✅ Hebrew font loaded (subsetting disabled)');
     }
 
     // Always load Latin fonts
