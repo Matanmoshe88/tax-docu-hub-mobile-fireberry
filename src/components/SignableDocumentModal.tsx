@@ -54,18 +54,11 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
           if (error) throw error;
           if (!data.success) throw new Error(data.error || 'Failed to generate PDF');
 
-          // Convert base64 to blob URL
-          const byteCharacters = atob(data.data.pdf);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: 'application/pdf' });
-          const blobUrl = URL.createObjectURL(blob);
+          // Use data URL directly - Chrome blocks blob URLs in iframes
+          const dataUrl = `data:application/pdf;base64,${data.data.pdf}`;
 
           console.log('✅ PDF loaded successfully');
-          setPdfBlobUrl(blobUrl);
+          setPdfBlobUrl(dataUrl);
         } catch (err) {
           console.error('❌ PDF fetch error:', err);
           setPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
@@ -76,10 +69,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
 
       fetchPdf();
     } else if (!open) {
-      // Cleanup blob URL on close to prevent memory leaks
-      if (pdfBlobUrl) {
-        URL.revokeObjectURL(pdfBlobUrl);
-      }
+      // Reset state when modal closes
       setHasSignature(false);
       setPdfBlobUrl(null);
       setPdfError(null);
