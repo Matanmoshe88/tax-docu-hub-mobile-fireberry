@@ -60,9 +60,42 @@ function formatDuration(seconds: number): string {
   return `${minutes} דקות ו-${remainingSeconds} שניות`;
 }
 
-// Reverse Hebrew text for RTL display in PDF
-function reverseHebrew(text: string): string {
-  return text.split('').reverse().join('');
+// Process text for RTL display in PDF - handles mixed Hebrew/Latin/numbers
+function processHebrewText(text: string): string {
+  // Split text into segments: Hebrew vs non-Hebrew (Latin, numbers, punctuation)
+  const segments: { text: string; isHebrew: boolean }[] = [];
+  let currentSegment = '';
+  let currentIsHebrew = false;
+  
+  for (const char of text) {
+    const charCode = char.charCodeAt(0);
+    // Hebrew Unicode range: 0x0590-0x05FF
+    const isHebrewChar = charCode >= 0x0590 && charCode <= 0x05FF;
+    
+    if (currentSegment === '') {
+      currentIsHebrew = isHebrewChar;
+      currentSegment = char;
+    } else if (isHebrewChar === currentIsHebrew) {
+      currentSegment += char;
+    } else {
+      segments.push({ text: currentSegment, isHebrew: currentIsHebrew });
+      currentSegment = char;
+      currentIsHebrew = isHebrewChar;
+    }
+  }
+  if (currentSegment) {
+    segments.push({ text: currentSegment, isHebrew: currentIsHebrew });
+  }
+  
+  // Reverse the order of segments and reverse Hebrew segments internally
+  const processedSegments = segments.reverse().map(seg => {
+    if (seg.isHebrew) {
+      return seg.text.split('').reverse().join('');
+    }
+    return seg.text;
+  });
+  
+  return processedSegments.join('');
 }
 
 // Draw audit trail page on the PDF with Hebrew font support
@@ -83,9 +116,9 @@ async function addAuditTrailPage(
   
   // Helper to draw Hebrew text (RTL)
   const drawHebrewText = (text: string, yPos: number, size: number = 11, color = rgb(0, 0, 0)) => {
-    const reversed = reverseHebrew(text);
-    const textWidth = hebrewFont.widthOfTextAtSize(reversed, size);
-    page.drawText(reversed, { x: rightEdge - textWidth, y: yPos, size, font: hebrewFont, color });
+    const processed = processHebrewText(text);
+    const textWidth = hebrewFont.widthOfTextAtSize(processed, size);
+    page.drawText(processed, { x: rightEdge - textWidth, y: yPos, size, font: hebrewFont, color });
   };
   
   // Helper to draw Latin text
@@ -259,10 +292,10 @@ serve(async (req) => {
     console.log('📝 Signature data URL length:', signatureDataUrl.length);
     console.log('📋 Audit data provided:', !!auditData);
 
-    // Default position: x:257, y:430 (from top) - bottom of signature will be at 490px
-    const position = signaturePosition || { x: 257, y: 430 };
-    // Default size: 120x60
-    const size = signatureSize || { width: 120, height: 60 };
+    // Default position: x:257, y:520 (from top)
+    const position = signaturePosition || { x: 257, y: 520 };
+    // Default size: 150x75 (bigger signature)
+    const size = signatureSize || { width: 150, height: 75 };
 
     console.log('📍 Signature position:', position);
     console.log('📐 Signature size:', size);
