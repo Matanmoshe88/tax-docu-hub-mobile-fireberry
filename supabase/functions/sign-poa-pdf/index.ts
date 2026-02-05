@@ -99,8 +99,16 @@ serve(async (req) => {
     const signedPdfBytes = await pdfDoc.save();
     console.log('✅ Signed PDF saved, bytes:', signedPdfBytes.length);
 
-    // Convert to base64
-    const signedPdfBase64 = btoa(String.fromCharCode(...signedPdfBytes));
+    // Convert to base64 using chunked approach to avoid stack overflow
+    const chunkSize = 8192;
+    let binary = "";
+    for (let i = 0; i < signedPdfBytes.length; i += chunkSize) {
+      const chunk = signedPdfBytes.subarray(i, Math.min(i + chunkSize, signedPdfBytes.length));
+      for (let j = 0; j < chunk.length; j++) {
+        binary += String.fromCharCode(chunk[j]);
+      }
+    }
+    const signedPdfBase64 = btoa(binary);
 
     return new Response(
       JSON.stringify({
