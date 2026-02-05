@@ -4,7 +4,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -40,6 +40,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [pdfScale, setPdfScale] = useState<number>(1);
   const {
     toast
   } = useToast();
@@ -97,6 +98,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       setPdfError(null);
       setCurrentPage(1);
       setNumPages(0);
+      setPdfScale(1);
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -234,7 +236,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     }
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+      <DialogContent className="max-w-2xl h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden" style={{ touchAction: 'pan-x pan-y' }}>
         {/* Fixed Header with close button */}
         <div className="flex items-center justify-between p-4 border-b bg-background shrink-0">
           <div className="flex items-center gap-2 text-xl font-semibold">
@@ -276,20 +278,35 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
             }} loading={<div className="flex items-center justify-center min-h-[300px]">
                       <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>} className="flex justify-center">
-                  <Page pageNumber={currentPage} width={containerWidth > 0 ? Math.min(containerWidth, 550) : undefined} renderTextLayer={true} renderAnnotationLayer={true} />
+                  <Page pageNumber={currentPage} width={containerWidth > 0 ? Math.min(containerWidth, 550) * pdfScale : undefined} renderTextLayer={true} renderAnnotationLayer={true} />
                 </Document>
               </div>
-              {numPages > 1 && <div className="flex items-center gap-4 mt-4 pb-2">
+              {/* PDF Controls: Zoom + Pagination */}
+              <div className="flex items-center justify-center gap-2 mt-4 pb-2 flex-wrap">
+                {/* Zoom controls */}
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPdfScale(s => Math.max(0.5, s - 0.25))} disabled={pdfScale <= 0.5}>
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs w-12 text-center">{Math.round(pdfScale * 100)}%</span>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPdfScale(s => Math.min(2, s + 0.25))} disabled={pdfScale >= 2}>
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Page navigation */}
+                {numPages > 1 && <>
+                  <div className="w-px h-6 bg-border mx-1" />
                   <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                   <span className="text-sm">
-                    עמוד {currentPage} מתוך {numPages}
+                    {currentPage} / {numPages}
                   </span>
                   <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} disabled={currentPage >= numPages}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                </div>}
+                </>}
+              </div>
             </div> : null}
         </div>
  
