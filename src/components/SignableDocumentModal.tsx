@@ -1,55 +1,88 @@
- import React, { useRef, useState, useEffect } from 'react';
- import {
-   Dialog,
-   DialogContent,
- } from '@/components/ui/dialog';
- import { Button } from '@/components/ui/button';
- import { PenTool, RotateCcw, Check, FileSignature, Loader2 } from 'lucide-react';
- import { useToast } from '@/hooks/use-toast';
- 
- interface SignableDocumentModalProps {
-   open: boolean;
-   onOpenChange: (open: boolean) => void;
-   recordId: string;
-   clientData: {
-     firstName: string;
-     lastName: string;
-     idNumber: string;
-     phone?: string;
-   };
-   onSigned?: () => void;
- }
- 
- export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
-   open,
-   onOpenChange,
-   recordId,
-   clientData,
-   onSigned,
- }) => {
-   const canvasRef = useRef<HTMLCanvasElement>(null);
-   const [isDrawing, setIsDrawing] = useState(false);
-   const [hasSignature, setHasSignature] = useState(false);
-   const [isLoadingPdf, setIsLoadingPdf] = useState(true);
-   const [isSubmitting, setIsSubmitting] = useState(false);
-   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-   const { toast } = useToast();
- 
-   // Create dummy PDF preview on load (simulating the fill-1301-form edge function)
-   useEffect(() => {
-     if (open) {
-       setIsLoadingPdf(true);
-       // Simulate loading the PDF from the edge function
-       setTimeout(() => {
-         // For demo purposes, we'll show a placeholder
-         // In production, this will call the fill-1301-form edge function
-         setPdfUrl(null); // We'll show a preview placeholder instead
-         setIsLoadingPdf(false);
-       }, 1000);
-     } else {
-       // Reset state when modal closes
-       setHasSignature(false);
-       setPdfUrl(null);
+import React, { useRef, useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SignableDocumentModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  recordId: string;
+  clientData: {
+    firstName: string;
+    lastName: string;
+    idNumber: string;
+    phone?: string;
+  };
+  onSigned?: () => void;
+}
+
+export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
+  open,
+  onOpenChange,
+  recordId,
+  clientData,
+  onSigned,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSignature, setHasSignature] = useState(false);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Fetch real PDF from generate-poa-pdf edge function
+  useEffect(() => {
+    if (open && recordId) {
+      setIsLoadingPdf(true);
+      setPdfError(null);
+
+      const fetchPdf = async () => {
+        try {
+          console.log('📄 Fetching POA PDF for recordId:', recordId);
+          
+          const { data, error } = await supabase.functions.invoke('generate-poa-pdf', {
+            body: { recordId, responseType: 'base64' }
+          });
+
+          if (error) throw error;
+          if (!data.success) throw new Error(data.error || 'Failed to generate PDF');
+
+          // Convert base64 to blob URL
+          const byteCharacters = atob(data.data.pdf);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+
+          console.log('✅ PDF loaded successfully');
+          setPdfBlobUrl(blobUrl);
+        } catch (err) {
+          console.error('❌ PDF fetch error:', err);
+          setPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
+        } finally {
+          setIsLoadingPdf(false);
+        }
+      };
+
+      fetchPdf();
+    } else if (!open) {
+      // Cleanup blob URL on close to prevent memory leaks
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+      setHasSignature(false);
+      setPdfBlobUrl(null);
+      setPdfError(null);
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -57,8 +90,8 @@
           ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
       }
-     }
-   }, [open]);
+    }
+  }, [open, recordId]);
  
    const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
      const canvas = canvasRef.current;
@@ -227,45 +260,54 @@
         </div>
  
         {/* Scrollable PDF Preview Area */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-hidden p-4">
           {isLoadingPdf ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-muted-foreground">טוען מסמך...</p>
             </div>
-          ) : (
-            <div className="bg-muted/30 rounded-lg p-6 border">
-              {/* Dummy PDF Preview */}
-              <div className="text-center space-y-4">
-                <h3 className="text-lg font-semibold">יפוי כח מס הכנסה</h3>
-                <p className="text-muted-foreground text-sm">מסמך מספר: POA-{recordId}</p>
-                
-                <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
-                  <p className="font-medium">פרטי הלקוח:</p>
-                  <p>שם: {clientData.firstName} {clientData.lastName}</p>
-                  <p>תעודת זהות: {clientData.idNumber}</p>
-                  {clientData.phone && <p>טלפון: {clientData.phone}</p>}
-                </div>
-
-                <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
-                  <p className="font-medium">הצהרה:</p>
-                  <p className="text-sm text-muted-foreground">
-                    אני הח"מ מייפה בזה את כוחם של קוויק טקס בע"מ לפעול בשמי מול רשות המיסים
-                    לצורך קבלת החזרי מס ו/או הגשת דוחות שנתיים.
-                  </p>
-                </div>
-
-                {/* Add more content to demonstrate scrolling */}
-                <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
-                  <p className="font-medium">תנאים והגבלות:</p>
-                  <p className="text-sm text-muted-foreground">
-                    יפוי כח זה תקף לתקופה של 12 חודשים מיום החתימה.
-                    ניתן לבטל את יפוי הכח בכל עת באמצעות הודעה בכתב.
-                  </p>
-                </div>
-               </div>
+          ) : pdfError ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3">
+              <AlertCircle className="h-10 w-10 text-destructive" />
+              <p className="text-destructive font-medium">שגיאה בטעינת המסמך</p>
+              <p className="text-sm text-muted-foreground text-center max-w-md">{pdfError}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setIsLoadingPdf(true);
+                  setPdfError(null);
+                  // Re-trigger fetch
+                  setTimeout(() => {
+                    const event = new CustomEvent('refetch-pdf');
+                    window.dispatchEvent(event);
+                  }, 100);
+                }}
+              >
+                נסה שוב
+              </Button>
             </div>
-          )}
+          ) : pdfBlobUrl ? (
+            <object
+              data={pdfBlobUrl}
+              type="application/pdf"
+              className="w-full h-full min-h-[400px] rounded-lg border bg-white"
+            >
+              <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 p-4">
+                <p className="text-muted-foreground text-center">
+                  הדפדפן אינו תומך בתצוגת PDF מוטמעת
+                </p>
+                <a 
+                  href={pdfBlobUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-primary underline"
+                >
+                  לחץ כאן לפתיחת המסמך
+                </a>
+              </div>
+            </object>
+          ) : null}
         </div>
  
         {/* Sticky Signature Footer */}
