@@ -3,6 +3,8 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
+const VERSION = "v3.0.0-test-y1000";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -260,10 +262,12 @@ serve(async (req) => {
     console.log('📝 Signature data URL length:', signatureDataUrl.length);
     console.log('📋 Audit data provided:', !!auditData);
 
-    // Default position: x:257, y:560 (from top)
-    const position = signaturePosition || { x: 257, y: 560 };
+    // Default position: x:257, y:1000 (TEST - way off page to verify deployment)
+    const position = signaturePosition || { x: 257, y: 1000 };
     // Default size: 150x75 (bigger signature)
     const size = signatureSize || { width: 150, height: 75 };
+
+    console.log(`🔖 VERSION: ${VERSION}`);
 
     console.log('📍 Signature position:', position);
     console.log('📐 Signature size:', size);
