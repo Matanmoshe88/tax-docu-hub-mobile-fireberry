@@ -262,8 +262,8 @@ serve(async (req) => {
     console.log('📝 Signature data URL length:', signatureDataUrl.length);
     console.log('📋 Audit data provided:', !!auditData);
 
-    // Default position: x:257, y:1000 (TEST - way off page to verify deployment)
-    const position = signaturePosition || { x: 257, y: 1000 };
+    // Default position: x:257, y:560 (from top)
+    const position = signaturePosition || { x: 257, y: 560 };
     // Default size: 150x75 (bigger signature)
     const size = signatureSize || { width: 150, height: 75 };
 
