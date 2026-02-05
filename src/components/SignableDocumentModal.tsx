@@ -2,11 +2,8 @@
  import {
    Dialog,
    DialogContent,
-   DialogHeader,
-   DialogTitle,
  } from '@/components/ui/dialog';
  import { Button } from '@/components/ui/button';
- import { Card, CardContent } from '@/components/ui/card';
  import { PenTool, RotateCcw, Check, FileSignature, Loader2 } from 'lucide-react';
  import { useToast } from '@/hooks/use-toast';
  
@@ -53,7 +50,13 @@
        // Reset state when modal closes
        setHasSignature(false);
        setPdfUrl(null);
-       clearSignature();
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
      }
    }, [open]);
  
@@ -214,127 +217,133 @@
  
    return (
      <Dialog open={open} onOpenChange={onOpenChange}>
-       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-         <DialogHeader className="p-6 pb-0">
-           <DialogTitle className="flex items-center gap-2 text-xl">
+      <DialogContent className="max-w-2xl h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+        {/* Fixed Header */}
+        <div className="flex items-center gap-2 p-4 border-b bg-background shrink-0">
+          <div className="flex items-center gap-2 text-xl font-semibold">
              <FileSignature className="h-6 w-6 text-primary" />
              יפוי כח מס הכנסה
-           </DialogTitle>
-         </DialogHeader>
+          </div>
+        </div>
  
-         <div className="p-6 space-y-6">
-           {/* PDF Preview Section */}
-           <Card className="border-2 border-muted">
-             <CardContent className="p-4">
-               {isLoadingPdf ? (
-                 <div className="flex flex-col items-center justify-center h-64 gap-3">
-                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                   <p className="text-muted-foreground">טוען מסמך...</p>
-                 </div>
-               ) : (
-                 <div className="bg-muted/30 rounded-lg p-6 min-h-[300px]">
-                   {/* Dummy PDF Preview */}
-                   <div className="text-center space-y-4">
-                     <h3 className="text-lg font-semibold">יפוי כח מס הכנסה</h3>
-                     <p className="text-muted-foreground text-sm">מסמך מספר: POA-{recordId}</p>
-                     
-                     <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
-                       <p className="font-medium">פרטי הלקוח:</p>
-                       <p>שם: {clientData.firstName} {clientData.lastName}</p>
-                       <p>תעודת זהות: {clientData.idNumber}</p>
-                       {clientData.phone && <p>טלפון: {clientData.phone}</p>}
-                     </div>
- 
-                     <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
-                       <p className="font-medium">הצהרה:</p>
-                       <p className="text-sm text-muted-foreground">
-                         אני הח"מ מייפה בזה את כוחם של קוויק טקס בע"מ לפעול בשמי מול רשות המיסים
-                         לצורך קבלת החזרי מס ו/או הגשת דוחות שנתיים.
-                       </p>
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </CardContent>
-           </Card>
- 
-           {/* Signature Section */}
-           <Card className="border-2 border-primary/20">
-             <CardContent className="p-4">
-               <div className="flex items-center gap-2 mb-3">
-                 <PenTool className="h-5 w-5 text-primary" />
-                 <span className="font-medium">חתימה דיגיטלית</span>
+        {/* Scrollable PDF Preview Area */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {isLoadingPdf ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">טוען מסמך...</p>
+            </div>
+          ) : (
+            <div className="bg-muted/30 rounded-lg p-6 border">
+              {/* Dummy PDF Preview */}
+              <div className="text-center space-y-4">
+                <h3 className="text-lg font-semibold">יפוי כח מס הכנסה</h3>
+                <p className="text-muted-foreground text-sm">מסמך מספר: POA-{recordId}</p>
+                
+                <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
+                  <p className="font-medium">פרטי הלקוח:</p>
+                  <p>שם: {clientData.firstName} {clientData.lastName}</p>
+                  <p>תעודת זהות: {clientData.idNumber}</p>
+                  {clientData.phone && <p>טלפון: {clientData.phone}</p>}
+                </div>
+
+                <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
+                  <p className="font-medium">הצהרה:</p>
+                  <p className="text-sm text-muted-foreground">
+                    אני הח"מ מייפה בזה את כוחם של קוויק טקס בע"מ לפעול בשמי מול רשות המיסים
+                    לצורך קבלת החזרי מס ו/או הגשת דוחות שנתיים.
+                  </p>
+                </div>
+
+                {/* Add more content to demonstrate scrolling */}
+                <div className="bg-background border rounded-lg p-4 text-right space-y-2 mt-4">
+                  <p className="font-medium">תנאים והגבלות:</p>
+                  <p className="text-sm text-muted-foreground">
+                    יפוי כח זה תקף לתקופה של 12 חודשים מיום החתימה.
+                    ניתן לבטל את יפוי הכח בכל עת באמצעות הודעה בכתב.
+                  </p>
+                </div>
                </div>
-               
-               <div className="relative">
-                 <canvas
-                   ref={canvasRef}
-                   width={500}
-                   height={150}
-                   className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white touch-none cursor-crosshair"
-                   style={{ height: '120px' }}
-                   onMouseDown={startDrawing}
-                   onMouseMove={draw}
-                   onMouseUp={stopDrawing}
-                   onMouseLeave={stopDrawing}
-                   onTouchStart={startDrawing}
-                   onTouchMove={draw}
-                   onTouchEnd={stopDrawing}
-                 />
-                 
-                 {!hasSignature && (
-                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                     <p className="text-muted-foreground/50">חתום כאן</p>
-                   </div>
-                 )}
-               </div>
+            </div>
+          )}
+        </div>
  
-               <div className="flex justify-end mt-3">
-                 <Button
-                   variant="ghost"
-                   size="sm"
-                   onClick={clearSignature}
-                   disabled={!hasSignature || isSubmitting}
-                   className="gap-1"
-                 >
-                   <RotateCcw className="h-4 w-4" />
-                   נקה חתימה
-                 </Button>
-               </div>
-             </CardContent>
-           </Card>
+        {/* Sticky Signature Footer */}
+        <div className="shrink-0 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 space-y-3">
+          {/* Signature pad and buttons row */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+            {/* Signature Canvas */}
+            <div className="flex-1 relative">
+              <div className="flex items-center gap-2 mb-2">
+                <PenTool className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">חתימה דיגיטלית</span>
+              </div>
+              <canvas
+                ref={canvasRef}
+                width={400}
+                height={100}
+                className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg bg-white touch-none cursor-crosshair"
+                style={{ height: '80px' }}
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+              />
+              {!hasSignature && (
+                <div className="absolute bottom-0 left-0 right-0 h-[80px] flex items-center justify-center pointer-events-none">
+                  <p className="text-muted-foreground/50 text-sm">חתום כאן</p>
+                </div>
+              )}
+            </div>
  
-           {/* Legal Notice */}
-           <p className="text-xs text-muted-foreground text-center">
-             בלחיצה על "חתום ושלח" אני מאשר/ת שקראתי את המסמך ומסכים/ה לתוכנו.
-             החתימה הדיגיטלית תישמר עם נתוני אימות מלאים.
-           </p>
- 
-           {/* Actions */}
-           <div className="flex gap-3 justify-end">
+            {/* Buttons */}
+            <div className="flex sm:flex-col gap-2 sm:justify-end shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearSignature}
+                disabled={!hasSignature || isSubmitting}
+                className="gap-1"
+              >
+                <RotateCcw className="h-4 w-4" />
+                נקה
+              </Button>
+              <Button
+                onClick={handleSign}
+                disabled={!hasSignature || isSubmitting || isLoadingPdf}
+                size="sm"
+                className="gap-1"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    שולח...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    חתום ושלח
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Legal Notice & Cancel */}
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground flex-1">
+              בלחיצה על "חתום ושלח" אני מאשר/ת שקראתי את המסמך ומסכים/ה לתוכנו.
+            </p>
              <Button
                variant="outline"
+              size="sm"
                onClick={() => onOpenChange(false)}
                disabled={isSubmitting}
              >
                ביטול
-             </Button>
-             <Button
-               onClick={handleSign}
-               disabled={!hasSignature || isSubmitting || isLoadingPdf}
-               className="gap-2"
-             >
-               {isSubmitting ? (
-                 <>
-                   <Loader2 className="h-4 w-4 animate-spin" />
-                   שולח...
-                 </>
-               ) : (
-                 <>
-                   <Check className="h-4 w-4" />
-                   חתום ושלח
-                 </>
-               )}
              </Button>
            </div>
          </div>
