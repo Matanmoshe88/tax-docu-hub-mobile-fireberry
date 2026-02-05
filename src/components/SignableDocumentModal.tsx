@@ -249,7 +249,33 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
         </div>
  
         {/* Scrollable PDF Preview Area */}
-        <div ref={containerRef} className="flex-1 overflow-auto p-4">
+        <div ref={containerRef} className="flex-1 overflow-auto p-4 relative">
+          {/* Sticky Zoom Controls */}
+          {pdfData && !isLoadingPdf && !pdfError && (
+            <div className="sticky top-0 z-10 flex items-center justify-center gap-2 pb-3 bg-background/95 backdrop-blur-sm">
+              <div className="flex items-center gap-1 bg-muted/80 rounded-lg px-2 py-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPdfScale(s => Math.max(0.5, s - 0.25))} disabled={pdfScale <= 0.5}>
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="text-xs w-10 text-center font-medium">{Math.round(pdfScale * 100)}%</span>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPdfScale(s => Math.min(2, s + 0.25))} disabled={pdfScale >= 2}>
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
+              {numPages > 1 && (
+                <div className="flex items-center gap-1 bg-muted/80 rounded-lg px-2 py-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs w-12 text-center font-medium">{currentPage} / {numPages}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} disabled={currentPage >= numPages}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           {isLoadingPdf ? <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-muted-foreground">טוען מסמך...</p>
@@ -260,7 +286,6 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
               <Button variant="outline" size="sm" onClick={() => {
             setIsLoadingPdf(true);
             setPdfError(null);
-            // Re-trigger fetch
             setTimeout(() => {
               const event = new CustomEvent('refetch-pdf');
               window.dispatchEvent(event);
@@ -280,32 +305,6 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
                     </div>} className="flex justify-center">
                   <Page pageNumber={currentPage} width={containerWidth > 0 ? Math.min(containerWidth, 550) * pdfScale : undefined} renderTextLayer={true} renderAnnotationLayer={true} />
                 </Document>
-              </div>
-              {/* PDF Controls: Zoom + Pagination */}
-              <div className="flex items-center justify-center gap-2 mt-4 pb-2 flex-wrap">
-                {/* Zoom controls */}
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPdfScale(s => Math.max(0.5, s - 0.25))} disabled={pdfScale <= 0.5}>
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <span className="text-xs w-12 text-center">{Math.round(pdfScale * 100)}%</span>
-                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPdfScale(s => Math.min(2, s + 0.25))} disabled={pdfScale >= 2}>
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                </div>
-                {/* Page navigation */}
-                {numPages > 1 && <>
-                  <div className="w-px h-6 bg-border mx-1" />
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm">
-                    {currentPage} / {numPages}
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} disabled={currentPage >= numPages}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                </>}
               </div>
             </div> : null}
         </div>
