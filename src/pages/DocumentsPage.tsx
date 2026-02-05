@@ -584,8 +584,11 @@ export const DocumentsPage: React.FC = () => {
            >
              <CardContent className="p-6">
                <div className="flex items-start gap-4">
-                   <div className={`p-3 rounded-lg ${poaSigned ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                     <FileText className="h-6 w-6" />
+                   <div className={`p-3 rounded-lg ${poaSigned ? 'bg-success/10 text-success' : 'bg-blue-50'}`}>
+                     <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke={poaSigned ? "currentColor" : "#2563eb"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                       <path d="M3 17c3.333-3.333 5-5 5-5s2.5 3 5 0 5-5 5-5" />
+                       <path d="M3 21c3.333-3.333 5-5 5-5s2.5 3 5 0 5-5 5-5" />
+                     </svg>
                  </div>
                  
                  <div className="flex-1">
