@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  getSmsData, 
+  getOtpVerificationData, 
+  getContractViewedAtIso, 
+  calculateReadingTime, 
+  captureDeviceInfo 
+} from '@/lib/auditTrail';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -206,16 +213,56 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     return publicUrl.publicUrl;
   };
 
-  // Helper: Call sign-poa-pdf edge function
+  // Helper: Call sign-poa-pdf edge function with audit trail
   const signPdfWithSignature = async (unsignedPdfBase64: string, signatureDataUrl: string): Promise<string> => {
     console.log('🖊️ Calling sign-poa-pdf edge function...');
+    
+    // Gather audit data from session storage
+    const smsData = getSmsData();
+    const otpData = getOtpVerificationData();
+    const deviceInfo = captureDeviceInfo();
+    const contractViewedAt = getContractViewedAtIso();
+    const timeSpentReading = calculateReadingTime();
+    
+    // Get IP address
+    let ipAddress = '';
+    try {
+      const { data: ipData } = await supabase.functions.invoke('get-client-ip');
+      ipAddress = ipData?.ip || '';
+    } catch (err) {
+      console.warn('Could not get IP address:', err);
+    }
+
+    const auditData = {
+      clientName: `${clientData.firstName} ${clientData.lastName}`,
+      clientId: clientData.idNumber,
+      clientPhone: clientData.phone || otpData.phone || '',
+      smsSentTime: smsData.smsSentTime,
+      smsProviderStatusId: smsData.smsProviderStatusId ?? undefined,
+      smsProviderStatusDescription: smsData.smsProviderStatusDescription ?? undefined,
+      otpCodeEntered: otpData.codeEntered,
+      otpVerified: !!otpData.verificationTimeIso,
+      otpVerificationTime: otpData.verificationTimeIso,
+      contractViewedAt,
+      signatureSubmittedAt: new Date().toISOString(),
+      timeSpentReadingSeconds: timeSpentReading,
+      ipAddress,
+      browserName: deviceInfo.browserName,
+      operatingSystem: deviceInfo.operatingSystem,
+      screenResolution: deviceInfo.screenResolution,
+      timezone: deviceInfo.timezone,
+      recordId,
+    };
+
+    console.log('📋 Audit data for POA:', auditData);
     
     const { data, error } = await supabase.functions.invoke('sign-poa-pdf', {
       body: {
         pdfBase64: unsignedPdfBase64,
         signatureDataUrl,
-        signaturePosition: { x: 257, y: 490 },
-        signatureSize: { width: 120, height: 60 }
+        signaturePosition: { x: 257, y: 430 },
+        signatureSize: { width: 120, height: 60 },
+        auditData
       }
     });
 
@@ -228,7 +275,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       throw new Error(data.error || 'שגיאה בחתימת המסמך');
     }
 
-    console.log('✅ PDF signed successfully');
+    console.log('✅ PDF signed with audit trail');
     return data.data.signedPdf;
   };
 
