@@ -12,13 +12,15 @@ import {
   Lock,
   Unlock,
   Eye,
-  Download
+   Download,
+   FileSignature
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createAndDownloadPDF } from '@/lib/pdfGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import { useFireberryData } from '@/hooks/useFireberryData';
 import { jsPDF } from 'jspdf';
+ import { SignableDocumentModal } from '@/components/SignableDocumentModal';
 
 interface Document {
   id: string;
@@ -47,6 +49,10 @@ export const DocumentsPage: React.FC = () => {
   const { clientData, isLoading, recordId, isDataFresh } = useFireberryData();
   const { toast } = useToast();
   
+   // State for POA TaxAuth signable document
+   const [poaModalOpen, setPoaModalOpen] = useState(false);
+   const [poaSigned, setPoaSigned] = useState(false);
+ 
   const [documents, setDocuments] = useState<Document[]>([
     {
       id: 'id-card',
@@ -573,6 +579,45 @@ export const DocumentsPage: React.FC = () => {
 
         {/* Documents List */}
         <div className="space-y-4">
+           {/* POA TaxAuth Signable Document Card */}
+           <Card 
+             className={`shadow-card hover:shadow-lg transition-all cursor-pointer ${
+               poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'hover:ring-2 hover:ring-primary/20'
+             }`}
+             onClick={() => !poaSigned && setPoaModalOpen(true)}
+           >
+             <CardContent className="p-6">
+               <div className="flex items-start gap-4">
+                 <div className={`p-3 rounded-lg ${poaSigned ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
+                   <FileSignature className="h-6 w-6" />
+                 </div>
+                 
+                 <div className="flex-1">
+                   <div className="flex items-start justify-between">
+                     <div>
+                       <div className="flex items-center gap-2">
+                         <h3 className="font-semibold text-lg">יפוי כח מס הכנסה</h3>
+                         {poaSigned && (
+                           <Badge variant="success" className="text-xs">נחתם</Badge>
+                         )}
+                       </div>
+                       <p className="text-muted-foreground text-sm mt-1">
+                         {poaSigned ? 'המסמך נחתם בהצלחה' : 'לחץ לצפייה וחתימה דיגיטלית'}
+                       </p>
+                       <div className="text-xs text-muted-foreground mt-2">
+                         נדרש
+                       </div>
+                     </div>
+                     
+                     {poaSigned && (
+                       <Lock className="h-5 w-5 text-success" />
+                     )}
+                   </div>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
+ 
           {documents.map((doc) => (
             <Card 
               key={doc.id} 
@@ -688,6 +733,20 @@ export const DocumentsPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+         {/* Signable Document Modal */}
+         <SignableDocumentModal
+           open={poaModalOpen}
+           onOpenChange={setPoaModalOpen}
+           recordId={recordId || ''}
+           clientData={{
+             firstName: clientData?.firstName || '',
+             lastName: clientData?.lastName || '',
+             idNumber: clientData?.idNumber || '',
+             phone: clientData?.phone,
+           }}
+           onSigned={() => setPoaSigned(true)}
+         />
       </div>
     </PortalLayout>
   );
