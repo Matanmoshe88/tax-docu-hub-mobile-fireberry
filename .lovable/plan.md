@@ -1,41 +1,76 @@
 
+# Fix: Sticky Signature Pad with Buttons
 
-# Plan: Update Contract Clause 4 Text
+## The Problem
+Currently, the signature pad and buttons are inside the scrollable content, so when the user scrolls to view the PDF document, they can't see or access the signature area.
 
-## Summary
-Simple text replacement in clause 4 of the contract to update the wording as requested.
+## The Solution
+Restructure the modal layout so that:
+1. **The PDF preview area** scrolls independently at the top
+2. **The signature pad + buttons** are fixed/sticky at the bottom and always visible
+3. The layout works well on both mobile and desktop
 
----
+## Visual Layout
 
-## What Will Change
-
-### Current Text (Line 27 in `contractUtils.ts`)
+```text
++----------------------------------+
+|  Header: יפוי כח מס הכנסה         |
++----------------------------------+
+|                                  |
+|  PDF Preview Area                |
+|  (scrollable independently)      |
+|                                  |
+|                                  |
++----------------------------------+
+|  Signature Pad   [נקה] [חתום]   |  <-- STICKY BOTTOM
+|  Legal notice text               |
++----------------------------------+
 ```
-כמו כן, ידוע ללקוח כי לצורך טיפול יעיל ומהיר הוא יידרש לחתום על מסמכים לרבות בקשה לרישום ייצוג ו/או מתן ייפוי הכוח המאפשר לחברה ו/או מי מטעמה להציג ולהגיש כל מסמך ומידע השייך ללקוח לביטוח לאומי ו/או לרשויות המס, המצ"ב להסכם זה (ראה מצ"ב יפוי כח כנספח א'), לטובת ביצוע בדיקת הזכאות וטיפול בהחזר המס, והלקוח מאשר לחברה ו/או מי מטעמה לקבל עבורו את כל הנתונים והמסמכים הרלוונטיים הנדרשים לצורך הטיפול בהחזר המס, ומתחייב לשתף פעולה להשגת כלל המסמכים והנתונים הנדרשים לצורך בדיקת זכאות הלקוח להחזר מס והגשת הדו"ח.
-```
 
-### New Text
-```
-כמו כן, ידוע ללקוח כי בחתימתו על הסכם זו הוא חותם על בקשה לרישום ייצוג ו/או מתן ייפוי הכוח המאפשר לחברה ו/או מי מטעמה להציג ולהגיש כל מסמך ומידע השייך ללקוח לביטוח לאומי ו/או לרשויות המס, המצ"ב להסכם זה - ראה מצ"ב יפוי כח כנספח א' . כל זאת לטובת ביצוע בדיקת הזכאות וטיפול בהחזר המס, והלקוח מאשר לחברה ו/או מי מטעמה לקבל עבורו את כל הנתונים והמסמכים הרלוונטיים הנדרשים לצורך הטיפול בהחזר המס, ומתחייב לשתף פעולה להשגת כלל המסמכים והנתונים הנדרשים לצורך בדיקת זכאות הלקוח להחזר מס והגשת הדו"ח.
-```
+## Changes to SignableDocumentModal.tsx
 
----
+1. **Split the DialogContent into two sections**:
+   - Top section: Scrollable content area with the PDF preview
+   - Bottom section: Fixed/sticky footer with signature pad and buttons
 
-## Key Differences
-1. **"לצורך טיפול יעיל ומהיר הוא יידרש לחתום"** → **"בחתימתו על הסכם זו הוא חותם"**
-2. **"(ראה מצ"ב יפוי כח כנספח א')"** → **"- ראה מצ"ב יפוי כח כנספח א' ."**
-3. Added **"כל זאת"** before "לטובת ביצוע"
+2. **Rearrange signature section layout**:
+   - Signature pad on the left (in RTL, on the right visually)
+   - Buttons inline next to the signature pad
+   - Compact legal notice below
 
----
+3. **CSS adjustments**:
+   - Use `flex flex-col h-full` on the modal content
+   - Make PDF area `flex-1 overflow-y-auto`
+   - Make signature footer `sticky bottom-0` with a solid background
+   - Add shadow to the sticky footer for visual separation
 
-## File to Modify
+## Before vs After
 
-**`src/lib/contractUtils.ts`** - Line 27
-- Replace the clause 4 text with the new version
+**Before:**
+- Signature pad hidden when scrolling
+- Buttons at the bottom of content
+- User must scroll back down to sign
 
----
+**After:**
+- Signature pad always visible at bottom
+- Buttons next to signature (inline)
+- User can scroll PDF and sign at any time
 
-## Impact
-- Both the web contract page and the generated PDF will automatically show the updated text since they both use the same `generateContractText()` function
-- No other changes required
+## Technical Implementation
 
+### File: `src/components/SignableDocumentModal.tsx`
+
+**Key changes:**
+
+1. Remove `overflow-y-auto` from `DialogContent`
+2. Add a flex container structure:
+   - Header section (fixed)
+   - Scrollable PDF content area (`flex-1 overflow-y-auto`)
+   - Sticky signature footer (`sticky bottom-0 bg-background shadow-lg`)
+
+3. Signature footer layout:
+   - Use `flex` to put signature pad and buttons side-by-side
+   - On mobile: Stack vertically with buttons full-width below
+   - On desktop: Buttons positioned next to signature pad
+
+4. Add visual separator (shadow) so the sticky footer stands out from scrollable content
