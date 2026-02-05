@@ -294,7 +294,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
         </div>
  
         {/* Sticky Signature Footer */}
-        <div className="shrink-0 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 space-y-3">
+        <div className="shrink-0 border-t bg-background shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 space-y-3" style={{ touchAction: 'pan-x pan-y', transform: 'translateZ(0)' }}>
           {/* Signature pad and buttons */}
           <div className="flex flex-col gap-3">
             {/* Signature Canvas */}
