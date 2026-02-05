@@ -35,6 +35,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   onSigned,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(true);
@@ -43,7 +44,24 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   const { toast } = useToast();
+
+  // Measure container width for responsive PDF sizing
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.clientWidth - 32); // minus padding
+      }
+    };
+    
+    if (open) {
+      // Initial measurement after a brief delay to ensure container is rendered
+      setTimeout(updateWidth, 100);
+      window.addEventListener('resize', updateWidth);
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+  }, [open]);
 
   // Fetch real PDF from generate-poa-pdf edge function
   useEffect(() => {
@@ -258,7 +276,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
         </div>
  
         {/* Scrollable PDF Preview Area */}
-        <div className="flex-1 overflow-hidden p-4">
+        <div ref={containerRef} className="flex-1 overflow-auto p-4">
           {isLoadingPdf ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -286,28 +304,30 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
               </Button>
             </div>
           ) : pdfData ? (
-            <div className="flex flex-col items-center">
-              <Document
-                file={`data:application/pdf;base64,${pdfData}`}
-                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                onLoadError={(error) => {
-                  console.error('PDF load error:', error);
-                  setPdfError('שגיאה בטעינת המסמך');
-                }}
-                loading={
-                  <div className="flex items-center justify-center min-h-[300px]">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                }
-                className="max-w-full"
-              >
-                <Page 
-                  pageNumber={currentPage} 
-                  width={500}
-                  renderTextLayer={true}
-                  renderAnnotationLayer={true}
-                />
-              </Document>
+            <div className="flex flex-col items-center w-full">
+              <div className="w-full overflow-x-auto">
+                <Document
+                  file={`data:application/pdf;base64,${pdfData}`}
+                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                  onLoadError={(error) => {
+                    console.error('PDF load error:', error);
+                    setPdfError('שגיאה בטעינת המסמך');
+                  }}
+                  loading={
+                    <div className="flex items-center justify-center min-h-[300px]">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  }
+                  className="flex justify-center"
+                >
+                  <Page 
+                    pageNumber={currentPage} 
+                    width={containerWidth > 0 ? Math.min(containerWidth, 550) : undefined}
+                    renderTextLayer={true}
+                    renderAnnotationLayer={true}
+                  />
+                </Document>
+              </div>
               {numPages > 1 && (
                 <div className="flex items-center gap-4 mt-4 pb-2">
                   <Button
