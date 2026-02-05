@@ -40,8 +40,8 @@ serve(async (req) => {
     console.log('📝 PDF base64 length:', pdfBase64.length);
     console.log('📝 Signature data URL length:', signatureDataUrl.length);
 
-    // Default position: x:257, y:490 (from top)
-    const position = signaturePosition || { x: 257, y: 490 };
+    // Default position: x:257, y:430 (from top) - bottom of signature will be at 490px
+    const position = signaturePosition || { x: 257, y: 430 };
     // Default size: 120x60
     const size = signatureSize || { width: 120, height: 60 };
 
