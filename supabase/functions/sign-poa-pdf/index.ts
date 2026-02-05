@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v4.0.0-hebrew-fix";
+const VERSION = "v4.1.0-font-debug";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -309,9 +309,20 @@ serve(async (req) => {
 
       const fontBytes = await fontData.arrayBuffer();
       console.log('📦 Font bytes size:', fontBytes.byteLength);
+      
+      // Log first few bytes to verify it's a valid TTF file
+      const fontView = new Uint8Array(fontBytes);
+      const header = Array.from(fontView.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      console.log('📦 Font header bytes:', header);
+      console.log('📦 Expected TTF header: 00 01 00 00 (or 4F 54 54 4F for OTF)');
+      
       // Disable subsetting to ensure all Hebrew glyphs are included
       hebrewFont = await pdfDoc.embedFont(fontBytes, { subset: false });
-      console.log('✅ Hebrew font loaded (subsetting disabled)');
+      
+      // Log font details
+      console.log('✅ Hebrew font embedded successfully');
+      console.log('📝 Font name:', hebrewFont.name);
+      console.log('📝 Font encoding:', hebrewFont.encodeText ? 'Custom' : 'Standard');
     }
 
     // Always load Latin fonts
