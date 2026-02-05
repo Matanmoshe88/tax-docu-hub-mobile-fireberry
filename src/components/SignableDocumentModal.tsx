@@ -170,6 +170,126 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasSignature(false);
   };
+  // Helper: Convert base64 to Blob
+  const base64ToBlob = (base64: string, mimeType: string): Blob => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
+  };
+
+  // Helper: Upload signature to Supabase storage
+  const uploadSignatureToStorage = async (signatureBlob: Blob): Promise<string> => {
+    const timestamp = Date.now();
+    const fileName = `poa-signature-${recordId}-${timestamp}.png`;
+    
+    const { data, error } = await supabase.storage
+      .from('signatures')
+      .upload(fileName, signatureBlob, {
+        contentType: 'image/png',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('❌ Signature upload error:', error);
+      throw new Error('שגיאה בהעלאת החתימה');
+    }
+
+    const { data: publicUrl } = supabase.storage
+      .from('signatures')
+      .getPublicUrl(data.path);
+
+    console.log('✅ Signature uploaded:', publicUrl.publicUrl);
+    return publicUrl.publicUrl;
+  };
+
+  // Helper: Call sign-poa-pdf edge function
+  const signPdfWithSignature = async (unsignedPdfBase64: string, signatureDataUrl: string): Promise<string> => {
+    console.log('🖊️ Calling sign-poa-pdf edge function...');
+    
+    const { data, error } = await supabase.functions.invoke('sign-poa-pdf', {
+      body: {
+        pdfBase64: unsignedPdfBase64,
+        signatureDataUrl,
+        signaturePosition: { x: 257, y: 490 },
+        signatureSize: { width: 120, height: 60 }
+      }
+    });
+
+    if (error) {
+      console.error('❌ Sign PDF error:', error);
+      throw new Error('שגיאה בחתימת המסמך');
+    }
+
+    if (!data.success) {
+      throw new Error(data.error || 'שגיאה בחתימת המסמך');
+    }
+
+    console.log('✅ PDF signed successfully');
+    return data.data.signedPdf;
+  };
+
+  // Helper: Upload signed PDF to Supabase storage
+  const uploadSignedPdfToStorage = async (pdfBlob: Blob): Promise<string> => {
+    const timestamp = Date.now();
+    const fileName = `poa-signed-${recordId}-${timestamp}.pdf`;
+    
+    const { data, error } = await supabase.storage
+      .from('signatures')
+      .upload(fileName, pdfBlob, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('❌ PDF upload error:', error);
+      throw new Error('שגיאה בהעלאת המסמך החתום');
+    }
+
+    const { data: publicUrl } = supabase.storage
+      .from('signatures')
+      .getPublicUrl(data.path);
+
+    console.log('✅ Signed PDF uploaded:', publicUrl.publicUrl);
+    return publicUrl.publicUrl;
+  };
+
+  // Helper: Update Fireberry with document URL
+  const updateFireberryDocument = async (pdfUrl: string): Promise<void> => {
+    const docid = sessionStorage.getItem('docid');
+    
+    if (!docid) {
+      console.warn('⚠️ No docid found in sessionStorage - skipping Fireberry update');
+      return;
+    }
+
+    console.log('📤 Updating Fireberry document...', { docid, pdfUrl });
+
+    const { data, error } = await supabase.functions.invoke('document-upload', {
+      body: {
+        docid,
+        documentType: 'poa_tax_auth',
+        documentUrl: pdfUrl
+      }
+    });
+
+    if (error) {
+      console.error('❌ Fireberry update error:', error);
+      // Don't throw - document is still saved to storage
+      toast({
+        title: "אזהרה",
+        description: "המסמך נשמר אך לא עודכן במערכת הניהול",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    console.log('✅ Fireberry updated successfully:', data);
+  };
+
   const handleSign = async () => {
     if (!hasSignature) {
       toast({
@@ -179,18 +299,21 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       });
       return;
     }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     // Check signature size
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
     let pixelCount = 0;
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] > 0) pixelCount++;
     }
+
     if (pixelCount < 100) {
       toast({
         title: "החתימה קטנה מדי",
@@ -199,31 +322,53 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       });
       return;
     }
+
+    if (!pdfData) {
+      toast({
+        title: "שגיאה",
+        description: "המסמך לא נטען כראוי",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
-      // Get signature as data URL
-      const signatureDataURL = canvas.toDataURL('image/png');
-
-      // TODO: In production, this will:
-      // 1. Upload signature to Supabase storage
-      // 2. Call fill-1301-form with signature embedded
-      // 3. Upload signed PDF to storage
-      // 4. Call document-upload to update Fireberry
-      // 5. Store audit trail
-
-      console.log('📝 POA TaxAuth signature captured');
-      console.log('📝 Client data:', clientData);
+      console.log('📝 Starting POA signing flow...');
       console.log('📝 Record ID:', recordId);
-      console.log('📝 Signature data URL length:', signatureDataURL.length);
 
-      // Simulate processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 1. Get signature as data URL
+      const signatureDataURL = canvas.toDataURL('image/png');
+      console.log('✅ Step 1: Signature captured');
+
+      // 2. Convert to blob and upload signature
+      const signatureBlob = await fetch(signatureDataURL).then(r => r.blob());
+      await uploadSignatureToStorage(signatureBlob);
+      console.log('✅ Step 2: Signature uploaded to storage');
+
+      // 3. Sign the PDF with signature overlay
+      const signedPdfBase64 = await signPdfWithSignature(pdfData, signatureDataURL);
+      console.log('✅ Step 3: PDF signed');
+
+      // 4. Upload signed PDF to storage
+      const signedPdfBlob = base64ToBlob(signedPdfBase64, 'application/pdf');
+      const signedPdfUrl = await uploadSignedPdfToStorage(signedPdfBlob);
+      console.log('✅ Step 4: Signed PDF uploaded');
+
+      // 5. Update Fireberry
+      await updateFireberryDocument(signedPdfUrl);
+      console.log('✅ Step 5: Fireberry updated');
+
+      // 6. Success!
       toast({
         title: "המסמך נחתם בהצלחה! 🎉",
         description: "יפוי כח מס הכנסה נשמר במערכת"
       });
+
       onSigned?.();
       onOpenChange(false);
+
     } catch (error) {
       console.error('💥 POA signing error:', error);
       toast({
