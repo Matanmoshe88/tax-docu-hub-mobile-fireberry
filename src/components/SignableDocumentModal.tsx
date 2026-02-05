@@ -288,25 +288,11 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
               </Button>
             </div>
           ) : pdfBlobUrl ? (
-            <object
-              data={pdfBlobUrl}
-              type="application/pdf"
+            <iframe
+              src={pdfBlobUrl + '#toolbar=1&navpanes=0'}
               className="w-full h-full min-h-[400px] rounded-lg border bg-white"
-            >
-              <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3 p-4">
-                <p className="text-muted-foreground text-center">
-                  הדפדפן אינו תומך בתצוגת PDF מוטמעת
-                </p>
-                <a 
-                  href={pdfBlobUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-primary underline"
-                >
-                  לחץ כאן לפתיחת המסמך
-                </a>
-              </div>
-            </object>
+              title="יפוי כח מס הכנסה"
+            />
           ) : null}
         </div>
  
