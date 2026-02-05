@@ -4,7 +4,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -235,12 +235,15 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   };
   return <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-        {/* Fixed Header */}
-        <div className="flex items-center gap-2 p-4 border-b bg-background shrink-0">
+        {/* Fixed Header with close button */}
+        <div className="flex items-center justify-between p-4 border-b bg-background shrink-0">
           <div className="flex items-center gap-2 text-xl font-semibold">
              <FileSignature className="h-6 w-6 text-primary" />
              יפוי כח מס הכנסה
           </div>
+          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} disabled={isSubmitting} className="h-8 w-8">
+            <X className="h-5 w-5" />
+          </Button>
         </div>
  
         {/* Scrollable PDF Preview Area */}
@@ -322,15 +325,10 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
             </div>
           </div>
 
-          {/* Legal Notice & Cancel */}
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground flex-1">
-              בלחיצה על "חתום ושלח" אני מאשר/ת שקראתי את המסמך ומסכים/ה לתוכנו.
-            </p>
-             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-               ביטול
-             </Button>
-           </div>
+          {/* Legal Notice */}
+          <p className="text-xs text-muted-foreground text-center whitespace-nowrap overflow-hidden text-ellipsis">
+            בלחיצה על "חתום ושלח" הנני מאשר/ת קריאת המסמך והסכמה לתוכנו.
+          </p>
          </div>
        </DialogContent>
      </Dialog>;
