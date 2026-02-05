@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Upload, 
   CreditCard, 
-  Car, 
   FileText,
   Lock,
   Unlock,
@@ -63,21 +62,8 @@ export const DocumentsPage: React.FC = () => {
       required: true,
       uploaded: false,
       locked: false,
-      alternative: 'driver-license',
       salesforceType: 'צילום תז קדימה',
       salesforceName: 'תעודת זהות'
-    },
-    {
-      id: 'driver-license',
-      title: 'רישיון נהיגה',
-      description: 'צילום רישיון נהיגה תקף',
-      icon: Car,
-      required: true,
-      uploaded: false,
-      locked: false,
-      alternative: 'id-card',
-      salesforceType: 'צילום רישיון נהיגה',
-      salesforceName: 'רישיון נהיגה'
     },
     {
       id: 'id-supplement',
@@ -112,7 +98,6 @@ export const DocumentsPage: React.FC = () => {
   const getDocumentType = (docId: string): string => {
     const mapping: Record<string, string> = {
       'id-card': 'id_photo',
-      'driver-license': 'drivers_license', // Driver's license
       'id-supplement': 'appendix',
       'bank-statement': 'bank_statement'
     };
@@ -135,7 +120,6 @@ export const DocumentsPage: React.FC = () => {
         // Map Fireberry document status to local document IDs
         const statusMapping = {
           'id-card': 'id-card',
-          'drivers-license': 'driver-license',
           'id-appendix': 'id-supplement',
           'account-management': 'bank-statement'
         };
@@ -166,7 +150,7 @@ export const DocumentsPage: React.FC = () => {
   }, [recordId, isDataFresh]); // Re-run when recordId or fresh data changes
 
   const hasIdentityDocument = documents.some(doc => 
-    (doc.id === 'id-card' || doc.id === 'driver-license') && doc.uploaded
+    doc.id === 'id-card' && doc.uploaded
   );
   
   const hasBankStatement = documents.some(doc => 
