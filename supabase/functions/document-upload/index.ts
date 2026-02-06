@@ -18,7 +18,7 @@ const DOCUMENT_FIELD_MAPPING = {
   'bank_statement': 'pcfsystemfield967', 
   'appendix': 'pcfsystemfield977',
    'drivers_license': 'pcfsystemfield978',
-   'poa_tax_auth': 'pcfsystemfield717'
+   'poa_tax_auth': 'pcfsystemfield984'
 };
 
 async function updateDocumentUrl(
