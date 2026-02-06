@@ -582,11 +582,24 @@ export const DocumentsPage: React.FC = () => {
         <div className="space-y-4">
            {/* POA TaxAuth Signable Document Card */}
            <Card 
-             className={`shadow-card hover:shadow-lg transition-all cursor-pointer ${
-               poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'ring-2 ring-primary/30 bg-primary/5 hover:ring-primary/50'
+             className={`shadow-card hover:shadow-lg transition-all relative ${
+               poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'ring-2 ring-primary/30 bg-primary/5 hover:ring-primary/50 cursor-pointer'
              }`}
              onClick={() => !poaSigned && setPoaModalOpen(true)}
            >
+             {/* Locked overlay when signed - same design as other documents */}
+             {poaSigned && (
+               <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-lg z-10 flex items-center justify-center">
+                 <div className="text-center space-y-2">
+                   <div className="flex justify-center">
+                     <Lock className="h-8 w-8 text-success" />
+                   </div>
+                   <h3 className="font-semibold text-lg">יפוי כח מס הכנסה</h3>
+                   <p className="text-sm text-muted-foreground">המסמך נחתם בהצלחה</p>
+                 </div>
+               </div>
+             )}
+             
              <CardContent className="p-6">
                <div className="flex items-start gap-4">
                  <div className={`p-3 rounded-lg ${poaSigned ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
@@ -598,32 +611,19 @@ export const DocumentsPage: React.FC = () => {
                      <div>
                        <div className="flex items-center gap-2">
                          <h3 className="font-semibold text-lg">יפוי כח מס הכנסה</h3>
-                         {poaSigned && (
-                           <Badge variant="success" className="text-xs">נחתם</Badge>
-                         )}
                        </div>
-                       {poaSigned ? (
-                         <p className="text-muted-foreground text-sm mt-1">המסמך נחתם בהצלחה</p>
-                       ) : (
-                         <div className="flex items-center gap-2 mt-1">
-                           <PenTool className="h-4 w-4 text-primary" />
-                           <span className="text-primary font-medium text-sm">לחץ לחתימה</span>
-                         </div>
-                       )}
-                       {!poaSigned && (
-                         <Badge variant="outline" className="text-xs mt-2 border-primary/30 text-primary">
-                           נדרש חתימה
-                         </Badge>
-                       )}
+                       <div className="flex items-center gap-2 mt-1">
+                         <PenTool className="h-4 w-4 text-primary" />
+                         <span className="text-primary font-medium text-sm">לחץ לחתימה</span>
+                       </div>
+                       <Badge variant="outline" className="text-xs mt-2 border-primary/30 text-primary">
+                         נדרש חתימה
+                       </Badge>
                      </div>
                      
-                     {poaSigned ? (
-                       <Lock className="h-5 w-5 text-success" />
-                     ) : (
-                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                         <PenTool className="h-4 w-4 text-primary" />
-                       </div>
-                     )}
+                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                       <PenTool className="h-4 w-4 text-primary" />
+                     </div>
                    </div>
                  </div>
                </div>
