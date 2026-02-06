@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v6.1.0-smart-font-detect";
+const VERSION = "v6.2.0-segment-rendering";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -73,6 +73,36 @@ function hasHebrew(text: string): boolean {
   return /[\u0590-\u05FF]/.test(text);
 }
 
+// Split text into segments of Hebrew and non-Hebrew characters
+function splitIntoSegments(text: string): Array<{ text: string; isHebrew: boolean }> {
+  const segments: Array<{ text: string; isHebrew: boolean }> = [];
+  let currentSegment = '';
+  let currentIsHebrew: boolean | null = null;
+  
+  for (const char of text) {
+    const charIsHebrew = isHebrewChar(char);
+    
+    if (currentIsHebrew === null) {
+      currentIsHebrew = charIsHebrew;
+      currentSegment = char;
+    } else if (charIsHebrew === currentIsHebrew) {
+      currentSegment += char;
+    } else {
+      if (currentSegment) {
+        segments.push({ text: currentSegment, isHebrew: currentIsHebrew });
+      }
+      currentSegment = char;
+      currentIsHebrew = charIsHebrew;
+    }
+  }
+  
+  if (currentSegment) {
+    segments.push({ text: currentSegment, isHebrew: currentIsHebrew! });
+  }
+  
+  return segments;
+}
+
 // Draw audit trail page on the PDF with proper font handling
 // Hebrew text uses hebrewFont, numbers/Latin use latinFont
 async function addAuditTrailPage(
@@ -99,10 +129,17 @@ async function addAuditTrailPage(
       return;
     }
     
-    // For Hebrew text (possibly with embedded values), render right-aligned
-    // Use Hebrew font for the whole line - it should handle mixed content
-    const textWidth = hebrewFont.widthOfTextAtSize(text, size);
-    page.drawText(text, { x: rightEdge - textWidth, y: yPos, size, font: hebrewFont, color });
+    // Split into segments and render from right to left
+    const segments = splitIntoSegments(text);
+    let xPos = rightEdge;
+    
+    // Calculate total width first, then render from right
+    for (const segment of segments) {
+      const font = segment.isHebrew ? hebrewFont : latinFont;
+      const segmentWidth = font.widthOfTextAtSize(segment.text, size);
+      xPos -= segmentWidth;
+      page.drawText(segment.text, { x: xPos, y: yPos, size, font, color });
+    }
   };
   
   // Helper to draw Latin text left-aligned
@@ -115,18 +152,10 @@ async function addAuditTrailPage(
     page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y1 }, thickness, color });
   };
   
-  // Helper for Hebrew label with value (auto-detects font for value)
+  // Helper for Hebrew label with value - combines and renders as mixed text
   const drawLabelValue = (label: string, value: string, yPos: number, size: number = 11) => {
-    // Draw label (Hebrew) from right
-    const labelWidth = hebrewFont.widthOfTextAtSize(label, size);
-    page.drawText(label, { x: rightEdge - labelWidth, y: yPos, size, font: hebrewFont, color: rgb(0, 0, 0) });
-    
-    // Draw value - detect if it contains Hebrew and use appropriate font
-    if (value) {
-      const valueFont = hasHebrew(value) ? hebrewFont : latinFont;
-      const valueWidth = valueFont.widthOfTextAtSize(value, size);
-      page.drawText(value, { x: rightEdge - labelWidth - valueWidth - 5, y: yPos, size, font: valueFont, color: rgb(0, 0, 0) });
-    }
+    const fullText = label + value;
+    drawMixedText(fullText, yPos, size);
   };
   
   // Title (Hebrew)
