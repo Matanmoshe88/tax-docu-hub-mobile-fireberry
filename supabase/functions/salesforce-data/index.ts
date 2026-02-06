@@ -34,6 +34,7 @@ interface DocumentStatus {
   'drivers-license': boolean;
   'id-appendix': boolean;
   'account-management': boolean;
+  'poa-signed': boolean;
 }
 
 interface FireberryDataResponse {
@@ -288,14 +289,17 @@ async function fetchDocumentDetails(documentId: string): Promise<{contractField:
   const contractField = record.pcfsystemfield725 || '';
   
   // Extract document status from the record
+  // pcfsystemfield717 is the POA TaxAuth signed PDF URL field
   const documentStatus: DocumentStatus = {
     'id-card': !!(record.pcfsystemfield719),
     'drivers-license': !!(record.pcfsystemfield978),
     'id-appendix': !!(record.pcfsystemfield977),
     'account-management': !!(record.pcfsystemfield967),
+    'poa-signed': !!(record.pcfsystemfield717),
   };
 
   console.log(`🔍 Contract field value: ${contractField}`);
+  console.log(`🔍 POA signed field (pcfsystemfield717): ${record.pcfsystemfield717}`);
   console.log(`🔍 Document status:`, documentStatus);
   
   return { contractField, documentStatus };
@@ -357,6 +361,7 @@ serve(async (req) => {
       'drivers-license': false,
       'id-appendix': false,
       'account-management': false,
+      'poa-signed': false,
     };
 
     if (!existingDocumentId) {
