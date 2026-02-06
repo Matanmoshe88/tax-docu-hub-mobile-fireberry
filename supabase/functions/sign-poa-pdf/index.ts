@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v6.0.0-mixed-fonts";
+const VERSION = "v6.1.0-smart-font-detect";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,16 +115,17 @@ async function addAuditTrailPage(
     page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y1 }, thickness, color });
   };
   
-  // Helper for Hebrew label with Latin value (renders label and value separately)
+  // Helper for Hebrew label with value (auto-detects font for value)
   const drawLabelValue = (label: string, value: string, yPos: number, size: number = 11) => {
     // Draw label (Hebrew) from right
     const labelWidth = hebrewFont.widthOfTextAtSize(label, size);
     page.drawText(label, { x: rightEdge - labelWidth, y: yPos, size, font: hebrewFont, color: rgb(0, 0, 0) });
     
-    // Draw value (Latin/numbers) to the left of the label
+    // Draw value - detect if it contains Hebrew and use appropriate font
     if (value) {
-      const valueWidth = latinFont.widthOfTextAtSize(value, size);
-      page.drawText(value, { x: rightEdge - labelWidth - valueWidth - 5, y: yPos, size, font: latinFont, color: rgb(0, 0, 0) });
+      const valueFont = hasHebrew(value) ? hebrewFont : latinFont;
+      const valueWidth = valueFont.widthOfTextAtSize(value, size);
+      page.drawText(value, { x: rightEdge - labelWidth - valueWidth - 5, y: yPos, size, font: valueFont, color: rgb(0, 0, 0) });
     }
   };
   
