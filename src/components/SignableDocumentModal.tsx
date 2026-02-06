@@ -427,8 +427,17 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       setIsSubmitting(false);
     }
   };
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  return <Dialog open={open} onOpenChange={isSubmitting ? undefined : onOpenChange}>
       <DialogContent className="max-w-2xl h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden" style={{ touchAction: 'pan-x pan-y' }}>
+        {/* Loading Overlay - blocks all interaction during submission */}
+        {isSubmitting && (
+          <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-lg font-medium text-foreground">שולח את המסמך החתום...</p>
+            <p className="text-sm text-muted-foreground">אנא המתן</p>
+          </div>
+        )}
+        
         {/* Fixed Header with close button */}
         <div className="flex items-center justify-between p-4 border-b bg-background shrink-0">
           <div className="flex items-center gap-2 text-xl font-semibold">
