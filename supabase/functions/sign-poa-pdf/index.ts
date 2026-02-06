@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v6.3.0-rtl-label-value-fix";
+const VERSION = "v6.4.0-colon-latin-font";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,10 +62,19 @@ function formatDuration(seconds: number): string {
   return `${minutes} דקות ו-${remainingSeconds} שניות`;
 }
 
-// Check if character is Hebrew
+// Check if character is Hebrew (excludes punctuation like colons)
 function isHebrewChar(char: string): boolean {
   const code = char.charCodeAt(0);
+  // Hebrew Unicode block: 0x0590 to 0x05FF
+  // Explicitly exclude ASCII punctuation (like ":")
   return code >= 0x0590 && code <= 0x05FF;
+}
+
+// Check if character should use Latin font (numbers, punctuation, Latin letters)
+function isLatinChar(char: string): boolean {
+  const code = char.charCodeAt(0);
+  // ASCII range (includes digits, punctuation like ":", Latin letters)
+  return code < 0x0590;
 }
 
 // Check if text contains Hebrew characters
@@ -153,25 +162,41 @@ async function addAuditTrailPage(
   };
   
   // Helper for Hebrew label with value - renders label on right, value on left
-  // This ensures correct RTL display: "שם מלא: ליאור משה" renders as "ליאור משה :שם מלא"
+  // Uses segment-based rendering to ensure colons use Latin font
   const drawLabelValue = (label: string, value: string, yPos: number, size: number = 11) => {
-    // Calculate widths
-    const labelFont = hebrewFont;
-    const valueFont = hasHebrew(value) ? hebrewFont : latinFont;
+    // Split label into segments (Hebrew vs Latin/punctuation)
+    const labelSegments = splitIntoSegments(label);
+    const valueSegments = splitIntoSegments(value);
     
-    const labelWidth = labelFont.widthOfTextAtSize(label, size);
-    const valueWidth = valueFont.widthOfTextAtSize(value, size);
+    // Calculate total width
+    let totalWidth = 0;
+    for (const seg of labelSegments) {
+      const font = seg.isHebrew ? hebrewFont : latinFont;
+      totalWidth += font.widthOfTextAtSize(seg.text, size);
+    }
+    for (const seg of valueSegments) {
+      const font = seg.isHebrew ? hebrewFont : latinFont;
+      totalWidth += font.widthOfTextAtSize(seg.text, size);
+    }
     
-    // Draw from right: label first, then value
+    // Draw from right edge
     let xPos = rightEdge;
     
-    // Draw Hebrew label (right-aligned)
-    xPos -= labelWidth;
-    page.drawText(label, { x: xPos, y: yPos, size, font: labelFont, color: rgb(0, 0, 0) });
+    // Draw label segments (right to left)
+    for (const seg of labelSegments) {
+      const font = seg.isHebrew ? hebrewFont : latinFont;
+      const segWidth = font.widthOfTextAtSize(seg.text, size);
+      xPos -= segWidth;
+      page.drawText(seg.text, { x: xPos, y: yPos, size, font, color: rgb(0, 0, 0) });
+    }
     
-    // Draw value (to the left of label)
-    xPos -= valueWidth;
-    page.drawText(value, { x: xPos, y: yPos, size, font: valueFont, color: rgb(0, 0, 0) });
+    // Draw value segments (continues left)
+    for (const seg of valueSegments) {
+      const font = seg.isHebrew ? hebrewFont : latinFont;
+      const segWidth = font.widthOfTextAtSize(seg.text, size);
+      xPos -= segWidth;
+      page.drawText(seg.text, { x: xPos, y: yPos, size, font, color: rgb(0, 0, 0) });
+    }
   };
   
   // Title (Hebrew)
