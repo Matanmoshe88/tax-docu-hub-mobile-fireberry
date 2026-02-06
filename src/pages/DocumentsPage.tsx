@@ -53,6 +53,22 @@ export const DocumentsPage: React.FC = () => {
    const [poaModalOpen, setPoaModalOpen] = useState(false);
    const [poaSigned, setPoaSigned] = useState(false);
  
+   // Load POA signed status from session storage on mount
+   useEffect(() => {
+     const documentsStatus = sessionStorage.getItem('documentsStatus');
+     if (documentsStatus) {
+       try {
+         const status = JSON.parse(documentsStatus);
+         if (status['poa-signed']) {
+           console.log('✅ POA already signed (from Fireberry status)');
+           setPoaSigned(true);
+         }
+       } catch (error) {
+         console.error('Error parsing POA status:', error);
+       }
+     }
+   }, [recordId, isDataFresh]);
+ 
   const [documents, setDocuments] = useState<Document[]>([
     {
       id: 'id-card',
