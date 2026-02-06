@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v6.2.0-segment-rendering";
+const VERSION = "v6.3.0-rtl-label-value-fix";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -120,8 +120,18 @@ async function addAuditTrailPage(
   const lineHeight = 18;
   const rightEdge = width - margin;
   
+  // Helper to draw Latin text left-aligned
+  const drawLatinText = (text: string, x: number, yPos: number, size: number = 11, font = latinFont, color = rgb(0, 0, 0)) => {
+    page.drawText(text, { x, y: yPos, size, font, color });
+  };
+  
+  // Helper to draw a line
+  const drawLine = (x1: number, y1: number, x2: number, thickness: number = 1, color = rgb(0.8, 0.8, 0.8)) => {
+    page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y1 }, thickness, color });
+  };
+  
   // Helper to draw mixed Hebrew/Latin text from right edge
-  // Splits text into segments and renders each with appropriate font
+  // Properly handles RTL rendering: Hebrew label first (on right), then value (on left)
   const drawMixedText = (text: string, yPos: number, size: number = 11, color = rgb(0, 0, 0)) => {
     // For pure Latin/numbers, use latin font left-aligned
     if (!hasHebrew(text)) {
@@ -142,20 +152,26 @@ async function addAuditTrailPage(
     }
   };
   
-  // Helper to draw Latin text left-aligned
-  const drawLatinText = (text: string, x: number, yPos: number, size: number = 11, font = latinFont, color = rgb(0, 0, 0)) => {
-    page.drawText(text, { x, y: yPos, size, font, color });
-  };
-  
-  // Helper to draw a line
-  const drawLine = (x1: number, y1: number, x2: number, thickness: number = 1, color = rgb(0.8, 0.8, 0.8)) => {
-    page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y1 }, thickness, color });
-  };
-  
-  // Helper for Hebrew label with value - combines and renders as mixed text
+  // Helper for Hebrew label with value - renders label on right, value on left
+  // This ensures correct RTL display: "שם מלא: ליאור משה" renders as "ליאור משה :שם מלא"
   const drawLabelValue = (label: string, value: string, yPos: number, size: number = 11) => {
-    const fullText = label + value;
-    drawMixedText(fullText, yPos, size);
+    // Calculate widths
+    const labelFont = hebrewFont;
+    const valueFont = hasHebrew(value) ? hebrewFont : latinFont;
+    
+    const labelWidth = labelFont.widthOfTextAtSize(label, size);
+    const valueWidth = valueFont.widthOfTextAtSize(value, size);
+    
+    // Draw from right: label first, then value
+    let xPos = rightEdge;
+    
+    // Draw Hebrew label (right-aligned)
+    xPos -= labelWidth;
+    page.drawText(label, { x: xPos, y: yPos, size, font: labelFont, color: rgb(0, 0, 0) });
+    
+    // Draw value (to the left of label)
+    xPos -= valueWidth;
+    page.drawText(value, { x: xPos, y: yPos, size, font: valueFont, color: rgb(0, 0, 0) });
   };
   
   // Title (Hebrew)
