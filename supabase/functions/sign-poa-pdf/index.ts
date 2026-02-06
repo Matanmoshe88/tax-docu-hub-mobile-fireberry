@@ -3,7 +3,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont } from "https://esm.sh/pd
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1?pin=v135";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135";
 
-const VERSION = "v7.0.0-single-font";
+const VERSION = "v6.2.0-segment-rendering";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -103,7 +103,8 @@ function splitIntoSegments(text: string): Array<{ text: string; isHebrew: boolea
   return segments;
 }
 
-// Draw audit trail page on the PDF using a single font (Noto Sans Hebrew supports Latin too)
+// Draw audit trail page on the PDF with proper font handling
+// Hebrew text uses hebrewFont, numbers/Latin use latinFont
 async function addAuditTrailPage(
   pdfDoc: PDFDocument, 
   auditData: AuditData, 
@@ -119,15 +120,31 @@ async function addAuditTrailPage(
   const lineHeight = 18;
   const rightEdge = width - margin;
   
-  // Simple helper to draw text right-aligned using Hebrew font (supports Latin too)
-  const drawText = (text: string, yPos: number, size: number = 11, color = rgb(0, 0, 0)) => {
-    const textWidth = hebrewFont.widthOfTextAtSize(text, size);
-    page.drawText(text, { x: rightEdge - textWidth, y: yPos, size, font: hebrewFont, color });
+  // Helper to draw mixed Hebrew/Latin text from right edge
+  // Splits text into segments and renders each with appropriate font
+  const drawMixedText = (text: string, yPos: number, size: number = 11, color = rgb(0, 0, 0)) => {
+    // For pure Latin/numbers, use latin font left-aligned
+    if (!hasHebrew(text)) {
+      page.drawText(text, { x: margin, y: yPos, size, font: latinFont, color });
+      return;
+    }
+    
+    // Split into segments and render from right to left
+    const segments = splitIntoSegments(text);
+    let xPos = rightEdge;
+    
+    // Calculate total width first, then render from right
+    for (const segment of segments) {
+      const font = segment.isHebrew ? hebrewFont : latinFont;
+      const segmentWidth = font.widthOfTextAtSize(segment.text, size);
+      xPos -= segmentWidth;
+      page.drawText(segment.text, { x: xPos, y: yPos, size, font, color });
+    }
   };
   
-  // Helper to draw Latin text left-aligned (for Record ID)
-  const drawLatinText = (text: string, x: number, yPos: number, size: number = 11, color = rgb(0, 0, 0)) => {
-    page.drawText(text, { x, y: yPos, size, font: latinFont, color });
+  // Helper to draw Latin text left-aligned
+  const drawLatinText = (text: string, x: number, yPos: number, size: number = 11, font = latinFont, color = rgb(0, 0, 0)) => {
+    page.drawText(text, { x, y: yPos, size, font, color });
   };
   
   // Helper to draw a line
@@ -135,100 +152,106 @@ async function addAuditTrailPage(
     page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y1 }, thickness, color });
   };
   
+  // Helper for Hebrew label with value - combines and renders as mixed text
+  const drawLabelValue = (label: string, value: string, yPos: number, size: number = 11) => {
+    const fullText = label + value;
+    drawMixedText(fullText, yPos, size);
+  };
+  
   // Title (Hebrew)
-  drawText('פרוטוקול אימות חתימה דיגיטלית', y, 18, rgb(0.15, 0.38, 0.93));
+  drawMixedText('פרוטוקול אימות חתימה דיגיטלית', y, 18, rgb(0.15, 0.38, 0.93));
   y -= 25;
-  drawText('מסלול ביקורת - יפוי כח מס הכנסה', y, 12, rgb(0.4, 0.4, 0.4));
+  drawMixedText('מסלול ביקורת - יפוי כח מס הכנסה', y, 12, rgb(0.4, 0.4, 0.4));
   y -= 10;
   drawLine(margin, y, width - margin, 2, rgb(0.15, 0.38, 0.93));
   y -= 30;
   
   // Client Identity Section
-  drawText('פרטי הלקוח', y, 14, rgb(0.12, 0.25, 0.69));
+  drawMixedText('פרטי הלקוח', y, 14, rgb(0.12, 0.25, 0.69));
   y -= 20;
   
   if (auditData.clientName) {
-    drawText(`שם מלא: ${auditData.clientName}`, y);
+    drawLabelValue('שם מלא: ', auditData.clientName, y);
     y -= lineHeight;
   }
   if (auditData.clientId) {
-    drawText(`מספר זהות: ${auditData.clientId}`, y);
+    drawLabelValue('מספר זהות: ', auditData.clientId, y);
     y -= lineHeight;
   }
   if (auditData.clientPhone) {
-    drawText(`טלפון: ${auditData.clientPhone}`, y);
+    drawLabelValue('טלפון: ', auditData.clientPhone, y);
     y -= lineHeight;
   }
   y -= 15;
   
   // Phone Verification Section
   const otpColor = auditData.otpVerified ? rgb(0.09, 0.40, 0.21) : rgb(0.86, 0.15, 0.15);
-  drawText('אימות טלפון (OTP)', y, 14, otpColor);
+  drawMixedText('אימות טלפון (OTP)', y, 14, otpColor);
   y -= 20;
   
   if (auditData.smsSentTime) {
-    drawText(`SMS נשלח: ${formatIsoToIsrael(auditData.smsSentTime)}`, y);
+    drawLabelValue('SMS נשלח: ', formatIsoToIsrael(auditData.smsSentTime), y);
     y -= lineHeight;
-    drawText('(נשלח על ידי צד ג׳ - InforUMobile)', y, 9, rgb(0.02, 0.52, 0.40));
+    drawMixedText('(נשלח על ידי צד ג׳ - InforUMobile)', y, 9, rgb(0.02, 0.52, 0.40));
     y -= lineHeight;
     if (auditData.smsProviderStatusId !== undefined) {
-      const statusText = `סטטוס: ${auditData.smsProviderStatusId} - ${auditData.smsProviderStatusDescription || 'הצלחה'}`;
-      drawText(statusText, y, 9);
+      const statusText = `${auditData.smsProviderStatusId} - ${auditData.smsProviderStatusDescription || 'הצלחה'}`;
+      drawLabelValue('סטטוס: ', statusText, y, 9);
       y -= lineHeight;
     }
   }
   if (auditData.otpCodeEntered) {
-    drawText(`קוד שהוזן: ${auditData.otpCodeEntered}`, y);
+    drawLabelValue('קוד שהוזן: ', auditData.otpCodeEntered, y);
     y -= lineHeight;
   }
   if (auditData.otpVerificationTime) {
-    drawText(`OTP אומת: ${formatIsoToIsrael(auditData.otpVerificationTime)}`, y);
+    drawLabelValue('OTP אומת: ', formatIsoToIsrael(auditData.otpVerificationTime), y);
     y -= lineHeight;
   }
   const verifyStatus = auditData.otpVerified ? 'אומת בהצלחה' : 'לא אומת';
-  drawText(`סטטוס אימות: ${verifyStatus}`, y, 11, otpColor);
+  drawMixedText(`סטטוס אימות: ${verifyStatus}`, y, 11, otpColor);
   y -= 25;
   
   // Document Timeline Section
-  drawText('ציר זמן המסמך', y, 14, rgb(0.43, 0.16, 0.84));
+  drawMixedText('ציר זמן המסמך', y, 14, rgb(0.43, 0.16, 0.84));
   y -= 20;
   
   if (auditData.contractViewedAt) {
-    drawText(`המסמך נצפה: ${formatIsoToIsrael(auditData.contractViewedAt)}`, y);
+    drawLabelValue('המסמך נצפה: ', formatIsoToIsrael(auditData.contractViewedAt), y);
     y -= lineHeight;
   }
   if (auditData.signatureSubmittedAt) {
-    drawText(`החתימה נשלחה: ${formatIsoToIsrael(auditData.signatureSubmittedAt)}`, y);
+    drawLabelValue('החתימה נשלחה: ', formatIsoToIsrael(auditData.signatureSubmittedAt), y);
     y -= lineHeight;
   }
   if (auditData.timeSpentReadingSeconds) {
-    drawText(`זמן קריאה: ${formatDuration(auditData.timeSpentReadingSeconds)}`, y);
+    drawLabelValue('זמן קריאה: ', formatDuration(auditData.timeSpentReadingSeconds), y);
     y -= lineHeight;
   }
   y -= 15;
   
   // Device & Session Info Section
-  drawText('פרטי מכשיר וחיבור', y, 14, rgb(0.85, 0.62, 0.04));
+  drawMixedText('פרטי מכשיר וחיבור', y, 14, rgb(0.85, 0.62, 0.04));
   y -= 20;
   
   if (auditData.ipAddress) {
-    drawText(`כתובת IP: ${auditData.ipAddress}`, y);
+    drawLabelValue('כתובת IP: ', auditData.ipAddress, y);
     y -= lineHeight;
   }
   if (auditData.browserName) {
-    drawText(`דפדפן: ${auditData.browserName}`, y);
+    drawLabelValue('דפדפן: ', auditData.browserName, y);
     y -= lineHeight;
   }
   if (auditData.operatingSystem) {
-    drawText(`מערכת הפעלה: ${auditData.operatingSystem}`, y);
+    drawLabelValue('מערכת הפעלה: ', auditData.operatingSystem, y);
     y -= lineHeight;
   }
   if (auditData.screenResolution) {
-    drawText(`רזולוציית מסך: ${auditData.screenResolution}`, y);
+    drawLabelValue('רזולוציית מסך: ', auditData.screenResolution, y);
     y -= lineHeight;
   }
   if (auditData.timezone) {
-    drawText(`אזור זמן: ${auditData.timezone}`, y);
+    drawLabelValue('אזור זמן: ', auditData.timezone, y);
     y -= lineHeight;
   }
   y -= 15;
@@ -244,7 +267,7 @@ async function addAuditTrailPage(
       borderColor: rgb(0.8, 0.85, 0.9),
       borderWidth: 1,
     });
-    drawLatinText(`Record ID: ${auditData.recordId}`, margin + 10, y - 15, 10, rgb(0.4, 0.45, 0.53));
+    drawLatinText(`Record ID: ${auditData.recordId}`, margin + 10, y - 15, 10, latinFont, rgb(0.4, 0.45, 0.53));
     y -= 45;
   }
   
@@ -258,16 +281,16 @@ async function addAuditTrailPage(
     borderColor: rgb(0.15, 0.38, 0.93),
     borderWidth: 2,
   });
-  drawText('תהליך חתימה', y - 20, 12, rgb(0.12, 0.25, 0.69));
-  drawText('פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על מסמך יפוי כח מס הכנסה.', y - 38, 10);
+  drawMixedText('תהליך חתימה', y - 20, 12, rgb(0.12, 0.25, 0.69));
+  drawMixedText('פרוטוקול זה מתעד את תהליך החתימה הדיגיטלית על מסמך יפוי כח מס הכנסה.', y - 38, 10);
   y -= 80;
   
   // Footer
   drawLine(margin, y, width - margin);
   y -= 15;
-  drawText('נוצר על ידי מערכת החתימה הדיגיטלית של QuickTax', y, 9, rgb(0.58, 0.64, 0.72));
+  drawMixedText('נוצר על ידי מערכת החתימה הדיגיטלית של QuickTax', y, 9, rgb(0.58, 0.64, 0.72));
   y -= 12;
-  drawText('כל הזמנים מוצגים באזור הזמן של ישראל (Asia/Jerusalem)', y, 9, rgb(0.58, 0.64, 0.72));
+  drawMixedText('כל הזמנים מוצגים באזור הזמן של ישראל (Asia/Jerusalem)', y, 9, rgb(0.58, 0.64, 0.72));
 }
 
 serve(async (req) => {
