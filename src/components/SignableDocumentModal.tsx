@@ -438,44 +438,46 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
           </div>
         )}
         
-        {/* Fixed Header with close button */}
+        {/* Fixed Header with close button and zoom controls */}
         <div className="flex items-center justify-between p-4 border-b bg-background shrink-0">
-          <div className="flex items-center gap-2 text-xl font-semibold">
-             <FileSignature className="h-6 w-6 text-primary" />
-             יפוי כח מס הכנסה
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-xl font-semibold">
+               <FileSignature className="h-6 w-6 text-primary" />
+               יפוי כח מס הכנסה
+            </div>
+            {/* Zoom Controls - inline with header */}
+            {pdfData && !isLoadingPdf && !pdfError && (
+              <div className="flex items-center gap-1 mr-2">
+                <div className="flex items-center gap-0.5 bg-muted/80 rounded-lg px-1.5 py-0.5">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPdfScale(s => Math.max(0.5, s - 0.25))} disabled={pdfScale <= 0.5}>
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="text-xs w-8 text-center font-medium">{Math.round(pdfScale * 100)}%</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setPdfScale(s => Math.min(2, s + 0.25))} disabled={pdfScale >= 2}>
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                {numPages > 1 && (
+                  <div className="flex items-center gap-0.5 bg-muted/80 rounded-lg px-1.5 py-0.5">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                    <span className="text-xs w-10 text-center font-medium">{currentPage}/{numPages}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} disabled={currentPage >= numPages}>
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} disabled={isSubmitting} className="h-8 w-8">
             <X className="h-5 w-5" />
           </Button>
         </div>
  
-        {/* Scrollable PDF Preview Area */}
-        <div ref={containerRef} className="flex-1 overflow-auto p-4 relative">
-          {/* Sticky Zoom Controls */}
-          {pdfData && !isLoadingPdf && !pdfError && (
-            <div className="sticky top-0 z-10 flex items-center justify-center gap-2 pb-3 bg-background/95 backdrop-blur-sm">
-              <div className="flex items-center gap-1 bg-muted/80 rounded-lg px-2 py-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPdfScale(s => Math.max(0.5, s - 0.25))} disabled={pdfScale <= 0.5}>
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className="text-xs w-10 text-center font-medium">{Math.round(pdfScale * 100)}%</span>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPdfScale(s => Math.min(2, s + 0.25))} disabled={pdfScale >= 2}>
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-              </div>
-              {numPages > 1 && (
-                <div className="flex items-center gap-1 bg-muted/80 rounded-lg px-2 py-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <span className="text-xs w-12 text-center font-medium">{currentPage} / {numPages}</span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setCurrentPage(p => Math.min(numPages, p + 1))} disabled={currentPage >= numPages}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+        {/* Scrollable PDF Preview Area - improved scrolling for zoomed content */}
+        <div ref={containerRef} className="flex-1 overflow-auto p-4 relative" style={{ WebkitOverflowScrolling: 'touch' }}>
 
           {isLoadingPdf ? <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -494,18 +496,20 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
           }}>
                 נסה שוב
               </Button>
-            </div> : pdfData ? <div className="flex flex-col items-center w-full">
-              <div className="w-full overflow-x-auto">
-                <Document file={`data:application/pdf;base64,${pdfData}`} onLoadSuccess={({
-              numPages
-            }) => setNumPages(numPages)} onLoadError={error => {
-              console.error('PDF load error:', error);
-              setPdfError('שגיאה בטעינת המסמך');
-            }} loading={<div className="flex items-center justify-center min-h-[300px]">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>} className="flex justify-center">
-                  <Page pageNumber={currentPage} width={containerWidth > 0 ? Math.min(containerWidth, 550) * pdfScale : undefined} renderTextLayer={true} renderAnnotationLayer={true} />
-                </Document>
+            </div> : pdfData ? <div className="flex flex-col items-center w-full min-w-fit">
+              <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="inline-block min-w-full" style={{ width: pdfScale > 1 ? `${Math.min(containerWidth, 550) * pdfScale}px` : 'auto' }}>
+                  <Document file={`data:application/pdf;base64,${pdfData}`} onLoadSuccess={({
+                numPages
+              }) => setNumPages(numPages)} onLoadError={error => {
+                console.error('PDF load error:', error);
+                setPdfError('שגיאה בטעינת המסמך');
+              }} loading={<div className="flex items-center justify-center min-h-[300px]">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>} className="flex justify-center">
+                    <Page pageNumber={currentPage} width={containerWidth > 0 ? Math.min(containerWidth, 550) * pdfScale : undefined} renderTextLayer={true} renderAnnotationLayer={true} />
+                  </Document>
+                </div>
               </div>
             </div> : null}
         </div>
