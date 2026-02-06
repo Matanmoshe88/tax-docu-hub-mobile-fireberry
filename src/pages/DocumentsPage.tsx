@@ -52,6 +52,11 @@ export const DocumentsPage: React.FC = () => {
    // State for POA TaxAuth signable document
    const [poaModalOpen, setPoaModalOpen] = useState(false);
    const [poaSigned, setPoaSigned] = useState(false);
+   
+   // Pre-fetched POA PDF state
+   const [poaPdfData, setPoaPdfData] = useState<string | null>(null);
+   const [poaPdfLoading, setPoaPdfLoading] = useState(false);
+   const [poaPdfError, setPoaPdfError] = useState<string | null>(null);
  
    // Load POA signed status from session storage on mount
    useEffect(() => {
@@ -68,6 +73,33 @@ export const DocumentsPage: React.FC = () => {
        }
      }
    }, [recordId, isDataFresh]);
+   
+   // Pre-fetch POA PDF on page load (only if not already signed)
+   useEffect(() => {
+     if (recordId && !poaSigned && !poaPdfData && !poaPdfLoading) {
+       console.log('📄 Pre-fetching POA PDF for recordId:', recordId);
+       setPoaPdfLoading(true);
+       setPoaPdfError(null);
+       
+       supabase.functions.invoke('generate-poa-pdf', {
+         body: { recordId, responseType: 'base64' }
+       })
+         .then(({ data, error }) => {
+           if (error) throw error;
+           if (!data.success) throw new Error(data.error || 'Failed to generate PDF');
+           
+           console.log('✅ POA PDF pre-fetched successfully');
+           setPoaPdfData(data.data.pdf);
+         })
+         .catch((err) => {
+           console.error('❌ POA PDF pre-fetch error:', err);
+           setPoaPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
+         })
+         .finally(() => {
+           setPoaPdfLoading(false);
+         });
+     }
+   }, [recordId, poaSigned, poaPdfData, poaPdfLoading]);
  
   const [documents, setDocuments] = useState<Document[]>([
     {
@@ -758,6 +790,9 @@ export const DocumentsPage: React.FC = () => {
              phone: clientData?.phone,
            }}
            onSigned={() => setPoaSigned(true)}
+           prefetchedPdfData={poaPdfData}
+           prefetchedPdfLoading={poaPdfLoading}
+           prefetchedPdfError={poaPdfError}
          />
       </div>
     </PortalLayout>

@@ -28,13 +28,20 @@ interface SignableDocumentModalProps {
     phone?: string;
   };
   onSigned?: () => void;
+  // Pre-fetched PDF data props
+  prefetchedPdfData?: string | null;
+  prefetchedPdfLoading?: boolean;
+  prefetchedPdfError?: string | null;
 }
 export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   open,
   onOpenChange,
   recordId,
   clientData,
-  onSigned
+  onSigned,
+  prefetchedPdfData,
+  prefetchedPdfLoading,
+  prefetchedPdfError
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,27 +74,43 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     }
   }, [open]);
 
-  // Fetch real PDF from generate-poa-pdf edge function
+  // Use pre-fetched PDF if available, otherwise fetch when modal opens
   useEffect(() => {
     if (open && recordId) {
+      // Check if we have pre-fetched data
+      if (prefetchedPdfData) {
+        console.log('✅ Using pre-fetched POA PDF');
+        setPdfData(prefetchedPdfData);
+        setIsLoadingPdf(false);
+        setPdfError(null);
+        return;
+      }
+      
+      // Check if pre-fetch is still loading
+      if (prefetchedPdfLoading) {
+        console.log('⏳ Pre-fetch in progress, waiting...');
+        setIsLoadingPdf(true);
+        setPdfError(null);
+        return;
+      }
+      
+      // Check if pre-fetch had an error
+      if (prefetchedPdfError) {
+        console.log('⚠️ Pre-fetch failed, attempting direct fetch...');
+      }
+      
+      // Fallback: fetch directly if no pre-fetched data available
       setIsLoadingPdf(true);
       setPdfError(null);
       const fetchPdf = async () => {
         try {
           console.log('📄 Fetching POA PDF for recordId:', recordId);
-          const {
-            data,
-            error
-          } = await supabase.functions.invoke('generate-poa-pdf', {
-            body: {
-              recordId,
-              responseType: 'base64'
-            }
+          const { data, error } = await supabase.functions.invoke('generate-poa-pdf', {
+            body: { recordId, responseType: 'base64' }
           });
           if (error) throw error;
           if (!data.success) throw new Error(data.error || 'Failed to generate PDF');
 
-          // Store base64 data for react-pdf
           console.log('✅ PDF loaded successfully');
           setPdfData(data.data.pdf);
         } catch (err) {
@@ -114,7 +137,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
         }
       }
     }
-  }, [open, recordId]);
+  }, [open, recordId, prefetchedPdfData, prefetchedPdfLoading, prefetchedPdfError]);
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
