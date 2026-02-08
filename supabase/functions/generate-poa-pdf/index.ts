@@ -85,15 +85,25 @@ serve(async (req) => {
       },
     })
 
+    // Log the request being sent to Lambda
+    const lambdaPayload = { recordId, responseType };
+    console.log(`📤 Sending request to Lambda:`, JSON.stringify(lambdaPayload));
+
     // Invoke Lambda
     const response = await lambda.send(new InvokeCommand({
       FunctionName: 'powerOfAttorneyPdfGenerator',
-      Payload: JSON.stringify({ recordId, responseType }),
+      Payload: JSON.stringify(lambdaPayload),
     }))
 
     // Parse Lambda response
-    const lambdaResult = JSON.parse(new TextDecoder().decode(response.Payload))
-    const body = JSON.parse(lambdaResult.body)
+    const lambdaResultRaw = new TextDecoder().decode(response.Payload);
+    console.log(`📥 Raw Lambda response:`, lambdaResultRaw);
+    
+    const lambdaResult = JSON.parse(lambdaResultRaw);
+    console.log(`📥 Lambda statusCode: ${lambdaResult.statusCode}`);
+    
+    const body = JSON.parse(lambdaResult.body);
+    console.log(`📥 Lambda body success: ${body.success}, errorCode: ${body.errorCode || 'none'}`)
 
     // Handle Lambda errors with specific error codes
     if (!body.success) {
