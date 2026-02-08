@@ -45,6 +45,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Rate limiting to prevent infinite loop attacks
+const requestCounts = new Map<string, number>();
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -53,6 +56,18 @@ serve(async (req) => {
 
   try {
     const { recordId, responseType = 'base64' } = await req.json()
+
+    // Rate limit: max 5 requests per recordId per minute
+    const count = requestCounts.get(recordId) || 0;
+    if (count > 5) {
+      console.warn(`⚠️ Rate limit exceeded for recordId: ${recordId}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Too many requests', errorCode: 'RATE_LIMITED' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    requestCounts.set(recordId, count + 1);
+    setTimeout(() => requestCounts.delete(recordId), 60000);
 
     if (!recordId) {
       return new Response(
