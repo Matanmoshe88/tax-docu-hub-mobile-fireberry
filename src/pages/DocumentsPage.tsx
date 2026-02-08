@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PortalLayout } from '@/components/PortalLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +57,7 @@ export const DocumentsPage: React.FC = () => {
    const [poaPdfData, setPoaPdfData] = useState<string | null>(null);
    const [poaPdfLoading, setPoaPdfLoading] = useState(false);
    const [poaPdfError, setPoaPdfError] = useState<string | null>(null);
+   const poaFetchAttempted = useRef(false);  // Track if fetch was attempted to prevent infinite loop
  
    // Load POA signed status from session storage on mount
    useEffect(() => {
@@ -76,7 +77,10 @@ export const DocumentsPage: React.FC = () => {
    
    // Pre-fetch POA PDF on page load (only if not already signed)
    useEffect(() => {
-     if (recordId && !poaSigned && !poaPdfData && !poaPdfLoading) {
+     // Only attempt fetch once per page load to prevent infinite loop
+     if (recordId && !poaSigned && !poaFetchAttempted.current) {
+       poaFetchAttempted.current = true;  // Mark as attempted immediately
+       
        console.log('📄 Pre-fetching POA PDF for recordId:', recordId);
        setPoaPdfLoading(true);
        setPoaPdfError(null);
@@ -99,7 +103,7 @@ export const DocumentsPage: React.FC = () => {
            setPoaPdfLoading(false);
          });
      }
-   }, [recordId, poaSigned, poaPdfData, poaPdfLoading]);
+   }, [recordId, poaSigned]);  // Removed poaPdfData and poaPdfLoading to prevent re-triggers
  
   const [documents, setDocuments] = useState<Document[]>([
     {
