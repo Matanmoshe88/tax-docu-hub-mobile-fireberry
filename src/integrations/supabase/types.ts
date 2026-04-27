@@ -116,6 +116,93 @@ export type Database = {
         }
         Relationships: []
       }
+      loan_leads: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          adset_id: string | null
+          adset_name: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          created_at: string | null
+          email: string
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          fireberry_account_id: string | null
+          fireberry_synced: boolean | null
+          has_property: boolean
+          id: string
+          income_above_20k: boolean
+          landing_page: string | null
+          marital_status: string
+          name: string
+          phone: string
+          source: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          created_at?: string | null
+          email: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          fireberry_account_id?: string | null
+          fireberry_synced?: boolean | null
+          has_property: boolean
+          id?: string
+          income_above_20k: boolean
+          landing_page?: string | null
+          marital_status: string
+          name: string
+          phone: string
+          source?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          created_at?: string | null
+          email?: string
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          fireberry_account_id?: string | null
+          fireberry_synced?: boolean | null
+          has_property?: boolean
+          id?: string
+          income_above_20k?: boolean
+          landing_page?: string | null
+          marital_status?: string
+          name?: string
+          phone?: string
+          source?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       otp_codes: {
         Row: {
           code: string
