@@ -1,90 +1,134 @@
 
-# Fix: POA PDF Pre-fetch Infinite Loop
+# Plan: Comprehensive POA Signing Logs (Production-Safe)
 
-## Problem Summary
+## Goal
 
-The current pre-fetch logic in `DocumentsPage.tsx` creates an infinite loop because:
+Answer "at what point did the POA process fail?" for any session, by emitting structured events at every milestone — captured in:
+1. **Microsoft Clarity custom events** (so the "Key events" column in the Clarity session list lights up per session)
+2. **A persistent `poa_flow_logs` table in Supabase** (so we can query failures even when Clarity playback is unavailable)
+3. **Browser console** — only in development; silenced in production builds
 
-1. The `useEffect` dependency array includes `poaPdfLoading`
-2. When a request finishes (`poaPdfLoading` goes from `true` to `false`), it triggers the effect again
-3. If the request failed, `poaPdfData` is still `null`, so the condition `!poaPdfData && !poaPdfLoading` passes
-4. This triggers another request immediately, creating an infinite loop
+All logging is **non-blocking, fire-and-forget, and never throws**, so it cannot slow down or break the signing flow.
 
-This is why you see 50+ boot/shutdown cycles in the edge function logs - it's not the edge function failing, it's the frontend hammering it with requests.
+## Production safety guarantees
 
-## Solution
+| Concern | Mitigation |
+|---|---|
+| User sees logs in DevTools | Console output is gated by `import.meta.env.DEV`. In production builds, no `[POA]` console output is emitted. |
+| Sensitive data in logs | We log only: `recordId`, `clientId` (already sent to Clarity today via `identify`), event name, step number, and a sanitized error message. **Never** log: signature image data, full PDF base64, OTP codes, phone numbers, IP, or full error stacks. A `sanitize()` helper truncates strings >200 chars and strips known PII keys. |
+| Performance — extra network requests | DB log calls use `supabase.functions.invoke` fire-and-forget (no `await`), wrapped in `try/catch` that swallows errors. Clarity calls are synchronous but trivial (already loaded). No request blocks the signing flow. |
+| Performance — bundle size | One small utility file (~2KB), no new deps. |
+| Failure of the logger breaks the flow | Every logger call is inside `try/catch`. A failure in `logPoaEvent` cannot propagate. |
+| Log spam / cost | Events are discrete milestones (≈10–15 per session), not continuous. DB table has a simple retention path (described below). |
+| RLS leakage | The `poa_flow_logs` table has RLS enabled with **no public policies**. Only the service-role edge function can insert; only admins can read via SQL editor. Frontend never reads from it. |
 
-Add a `useRef` flag to track whether a fetch has been attempted, preventing re-triggers.
+## What gets tracked
+
+Every event records: `event` name, `recordId`, `clientId`, `step` number, optional sanitized `error`, `created_at`.
+
+| # | Event | Where it fires |
+|---|---|---|
+| 1 | `poa_page_loaded` | DocumentsPage mount with recordId |
+| 2 | `poa_prefetch_started` | Pre-fetch effect begins |
+| 3 | `poa_prefetch_succeeded` / `poa_prefetch_failed` | generate-poa-pdf returns |
+| 4 | `poa_modal_opened` | User clicks "חתום" |
+| 5 | `poa_pdf_rendered` / `poa_pdf_render_failed` | react-pdf load callback |
+| 6 | `poa_signature_started` | First stroke on canvas |
+| 7 | `poa_signature_cleared` | Clear button |
+| 8 | `poa_sign_clicked` | "אישור" pressed |
+| 9 | `poa_signature_too_small` | Validation rejected |
+| 10 | `poa_signature_uploaded` / `poa_signature_upload_failed` | Step 2 |
+| 11 | `poa_pdf_signed` / `poa_pdf_sign_failed` | Step 3 (sign-poa-pdf) |
+| 12 | `poa_signed_pdf_uploaded` / `poa_signed_pdf_upload_failed` | Step 4 |
+| 13 | `poa_fireberry_updated` / `poa_fireberry_update_failed` | Step 5 |
+| 14 | `poa_flow_completed` | All steps done |
+| 15 | `poa_modal_closed_unsigned` | Modal closed without success |
 
 ## Implementation
 
-### File: `src/pages/DocumentsPage.tsx`
+### 1. New utility: `src/lib/poaLogger.ts`
 
-**Step 1:** Add a ref to track fetch attempts (around line 57):
+```ts
+// Pseudocode shape
+let context = { recordId: '', clientId: '' };
+const isDev = import.meta.env.DEV;
 
-```typescript
-// Pre-fetched POA PDF state
-const [poaPdfData, setPoaPdfData] = useState<string | null>(null);
-const [poaPdfLoading, setPoaPdfLoading] = useState(false);
-const [poaPdfError, setPoaPdfError] = useState<string | null>(null);
-const poaFetchAttempted = useRef(false);  // NEW: Track if fetch was attempted
+export function setPoaContext(c) { context = { ...context, ...c }; }
+
+export function logPoaEvent(event, payload?, error?) {
+  try {
+    const safe = sanitize(payload);
+    const errMsg = error ? String(error?.message || error).slice(0, 300) : undefined;
+
+    if (isDev) console.log(`[POA] ${event}`, { ...context, ...safe, error: errMsg });
+
+    // Clarity custom event — shows in "Key events" column
+    (window as any).clarity?.("event", event);
+    if (errMsg) (window as any).clarity?.("set", "poa_last_error_step", event);
+
+    // Fire-and-forget DB persist (no await, no throw)
+    supabase.functions.invoke('log-poa-event', {
+      body: { event, ...context, payload: safe, error: errMsg }
+    }).catch(() => {}); // silently ignore
+  } catch { /* never break the flow */ }
+}
 ```
 
-**Step 2:** Update the useEffect to use the ref (lines 77-102):
+`sanitize()` removes/truncates: anything containing `pdf`, `signature`, `base64`, `code`, `otp`, `phone`, `ip` keys; clamps strings to 200 chars.
 
-```typescript
-// Pre-fetch POA PDF on page load (only if not already signed)
-useEffect(() => {
-  // Only attempt fetch once per page load
-  if (recordId && !poaSigned && !poaFetchAttempted.current) {
-    poaFetchAttempted.current = true;  // Mark as attempted immediately
-    
-    console.log('📄 Pre-fetching POA PDF for recordId:', recordId);
-    setPoaPdfLoading(true);
-    setPoaPdfError(null);
-    
-    supabase.functions.invoke('generate-poa-pdf', {
-      body: { recordId, responseType: 'base64' }
-    })
-      .then(({ data, error }) => {
-        if (error) throw error;
-        if (!data.success) throw new Error(data.error || 'Failed to generate PDF');
-        
-        console.log('✅ POA PDF pre-fetched successfully');
-        setPoaPdfData(data.data.pdf);
-      })
-      .catch((err) => {
-        console.error('❌ POA PDF pre-fetch error:', err);
-        setPoaPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
-      })
-      .finally(() => {
-        setPoaPdfLoading(false);
-      });
-  }
-}, [recordId, poaSigned]);  // Remove poaPdfData and poaPdfLoading from dependencies
+### 2. New edge function: `supabase/functions/log-poa-event/index.ts`
+
+- CORS headers (matches existing functions)
+- Validates body with Zod (`event` required, others optional)
+- Inserts into `poa_flow_logs` using service-role client
+- Always returns 200, even on insert failure (logging must never surface errors)
+- No JWT required (logging only — no sensitive reads)
+
+### 3. New DB table: `poa_flow_logs`
+
+Created via migration:
+
+```sql
+create table public.poa_flow_logs (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  record_id text,
+  client_id text,
+  event text not null,
+  payload jsonb,
+  error text,
+  user_agent text
+);
+create index poa_flow_logs_record_id_idx on public.poa_flow_logs (record_id, created_at desc);
+create index poa_flow_logs_event_idx on public.poa_flow_logs (event, created_at desc);
+
+alter table public.poa_flow_logs enable row level security;
+-- No policies = nobody can read/write via anon/auth keys.
+-- Only service-role (used in the log-poa-event function) bypasses RLS.
 ```
 
-**Step 3:** Add useRef import if not already present:
+Retention: optional follow-up — a scheduled cleanup of rows older than 90 days. Not built now; flagged for later.
 
-```typescript
-import { useRef } from "react";
-```
+### 4. Wire into the existing flow
 
-## Why This Works
+- **`src/hooks/useFireberryData.ts`** — after the existing `clarity("identify", ...)` call, also call `setPoaContext({ recordId, clientId: idNumber })`.
+- **`src/pages/DocumentsPage.tsx`** — emit `poa_page_loaded`, `poa_prefetch_started`, `poa_prefetch_succeeded|failed`, `poa_modal_opened`.
+- **`src/components/SignableDocumentModal.tsx`** — emit modal/render/signature/step events alongside the existing `console.log('✅ Step N…')` lines (we don't remove existing logs; they're already there and harmless).
 
-| Before | After |
-|--------|-------|
-| Effect triggers when `poaPdfLoading` changes | Effect only checks `recordId` and `poaSigned` |
-| No tracking of previous attempts | `useRef` remembers across re-renders |
-| Failed request allows re-trigger | Once attempted, never re-triggers automatically |
+No existing behavior changes — only additive observability.
 
-## Bonus: Manual Retry Option
+## How this answers the failure-point question
 
-If the pre-fetch fails, the `SignableDocumentModal` already has fallback fetch logic. Users can close and re-open the modal to retry. For a better UX, we could add a retry button in the modal's error state, but that's optional for now.
+For any failed session:
+- **In Clarity**: open the user's session — the "Key events" column shows the exact sequence (e.g. `poa_modal_opened → poa_pdf_rendered → poa_sign_clicked → poa_pdf_sign_failed`).
+- **In SQL** (when Clarity playback is white/unavailable):
+  ```sql
+  select created_at, event, error from poa_flow_logs
+  where record_id = '<id>' order by created_at;
+  ```
 
-## Testing
+## Out of scope
 
-After implementation:
-1. Open the documents page for recordId `92d0570f-28b0-4176-b5e1-5c29857ea556`
-2. Check edge function logs - should see only 1 boot, not 50+
-3. Open the POA modal - should display the PDF correctly
+- No retry logic.
+- No changes to Clarity dashboard masking.
+- No automatic log retention job (can be added later).
