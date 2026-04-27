@@ -626,7 +626,7 @@ export const DocumentsPage: React.FC = () => {
              className={`shadow-card hover:shadow-lg transition-all relative ${
                poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'ring-2 ring-primary/30 bg-primary/5 hover:ring-primary/50 cursor-pointer'
              }`}
-             onClick={() => !poaSigned && setPoaModalOpen(true)}
+             onClick={() => { if (!poaSigned) { logPoaEvent('poa_modal_opened'); setPoaModalOpen(true); } }}
            >
              {/* Locked overlay when signed - same design as other documents */}
              {poaSigned && (
@@ -790,7 +790,7 @@ export const DocumentsPage: React.FC = () => {
          {/* Signable Document Modal */}
          <SignableDocumentModal
            open={poaModalOpen}
-           onOpenChange={setPoaModalOpen}
+           onOpenChange={(open) => { if (!open && !poaSigned) logPoaEvent('poa_modal_closed_unsigned'); setPoaModalOpen(open); }}
            recordId={recordId || ''}
            clientData={{
              firstName: clientData?.firstName || '',
