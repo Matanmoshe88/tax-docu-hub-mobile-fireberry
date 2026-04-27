@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { logPoaEvent } from '@/lib/poaLogger';
 import { 
   getSmsData, 
   getOtpVerificationData, 
@@ -187,6 +188,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     ctx.strokeStyle = '#1e40af';
     ctx.lineTo(x, y);
     ctx.stroke();
+    if (!hasSignature) logPoaEvent('poa_signature_started');
     setHasSignature(true);
   };
   const stopDrawing = () => {
@@ -199,6 +201,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasSignature(false);
+    logPoaEvent('poa_signature_cleared');
   };
   // Helper: Convert base64 to Blob
   const base64ToBlob = (base64: string, mimeType: string): Blob => {
@@ -524,9 +527,10 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
                 <div className="inline-block min-w-full" style={{ width: pdfScale > 1 ? `${Math.min(containerWidth, 550) * pdfScale}px` : 'auto' }}>
                   <Document file={`data:application/pdf;base64,${pdfData}`} onLoadSuccess={({
                 numPages
-              }) => setNumPages(numPages)} onLoadError={error => {
+              }) => { setNumPages(numPages); logPoaEvent('poa_pdf_rendered', { numPages }); }} onLoadError={error => {
                 console.error('PDF load error:', error);
                 setPdfError('שגיאה בטעינת המסמך');
+                logPoaEvent('poa_pdf_render_failed', undefined, error);
               }} loading={<div className="flex items-center justify-center min-h-[300px]">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       </div>} className="flex justify-center">
