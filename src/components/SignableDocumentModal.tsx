@@ -364,6 +364,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   };
 
   const handleSign = async () => {
+    logPoaEvent('poa_sign_clicked');
     if (!hasSignature) {
       toast({
         title: "חתימה נדרשת",
@@ -388,6 +389,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     }
 
     if (pixelCount < 100) {
+      logPoaEvent('poa_signature_too_small', { pixelCount });
       toast({
         title: "החתימה קטנה מדי",
         description: "אנא חתום שוב בצורה ברורה יותר",
@@ -417,23 +419,50 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
 
       // 2. Convert to blob and upload signature
       const signatureBlob = await fetch(signatureDataURL).then(r => r.blob());
-      await uploadSignatureToStorage(signatureBlob);
+      try {
+        await uploadSignatureToStorage(signatureBlob);
+        logPoaEvent('poa_signature_uploaded');
+      } catch (err) {
+        logPoaEvent('poa_signature_upload_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 2: Signature uploaded to storage');
 
       // 3. Sign the PDF with signature overlay
-      const signedPdfBase64 = await signPdfWithSignature(pdfData, signatureDataURL);
+      let signedPdfBase64: string;
+      try {
+        signedPdfBase64 = await signPdfWithSignature(pdfData, signatureDataURL);
+        logPoaEvent('poa_pdf_signed');
+      } catch (err) {
+        logPoaEvent('poa_pdf_sign_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 3: PDF signed');
 
       // 4. Upload signed PDF to storage
       const signedPdfBlob = base64ToBlob(signedPdfBase64, 'application/pdf');
-      const signedPdfUrl = await uploadSignedPdfToStorage(signedPdfBlob);
+      let signedPdfUrl: string;
+      try {
+        signedPdfUrl = await uploadSignedPdfToStorage(signedPdfBlob);
+        logPoaEvent('poa_signed_pdf_uploaded');
+      } catch (err) {
+        logPoaEvent('poa_signed_pdf_upload_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 4: Signed PDF uploaded');
 
       // 5. Update Fireberry
-      await updateFireberryDocument(signedPdfUrl);
+      try {
+        await updateFireberryDocument(signedPdfUrl);
+        logPoaEvent('poa_fireberry_updated');
+      } catch (err) {
+        logPoaEvent('poa_fireberry_update_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 5: Fireberry updated');
 
       // 6. Success!
+      logPoaEvent('poa_flow_completed');
       toast({
         title: "המסמך נחתם בהצלחה! 🎉",
         description: "יפוי כח מס הכנסה נשמר במערכת"
