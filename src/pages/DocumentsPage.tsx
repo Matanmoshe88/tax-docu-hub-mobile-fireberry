@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useFireberryData } from '@/hooks/useFireberryData';
 import { jsPDF } from 'jspdf';
  import { SignableDocumentModal } from '@/components/SignableDocumentModal';
+import { logPoaEvent } from '@/lib/poaLogger';
 
 interface Document {
   id: string;
@@ -82,6 +83,8 @@ export const DocumentsPage: React.FC = () => {
        poaFetchAttempted.current = true;  // Mark as attempted immediately
        
        console.log('📄 Pre-fetching POA PDF for recordId:', recordId);
+       logPoaEvent('poa_page_loaded', { recordId });
+       logPoaEvent('poa_prefetch_started');
        setPoaPdfLoading(true);
        setPoaPdfError(null);
        
@@ -94,10 +97,12 @@ export const DocumentsPage: React.FC = () => {
            
            console.log('✅ POA PDF pre-fetched successfully');
            setPoaPdfData(data.data.pdf);
+           logPoaEvent('poa_prefetch_succeeded');
          })
          .catch((err) => {
            console.error('❌ POA PDF pre-fetch error:', err);
            setPoaPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
+           logPoaEvent('poa_prefetch_failed', undefined, err);
          })
          .finally(() => {
            setPoaPdfLoading(false);
