@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.sign-poa-pdf]
 verify_jwt = false
+
+[functions.log-poa-event]
+verify_jwt = false
