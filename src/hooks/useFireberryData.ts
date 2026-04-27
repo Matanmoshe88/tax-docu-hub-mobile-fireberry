@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { setPoaContext } from '@/lib/poaLogger';
 
 interface ClientData {
   firstName: string;
@@ -217,6 +218,9 @@ export const useFireberryData = () => {
         (window as any).clarity("identify", updatedClientData.idNumber, null, null, fullName || "Unknown");
         console.log('📊 Clarity user identified by ID:', updatedClientData.idNumber, fullName);
       }
+
+      // Set context for POA flow logger so every event carries record/client ids
+      setPoaContext({ recordId: recordId || undefined, clientId: updatedClientData.idNumber || undefined });
 
     } catch (error) {
       console.error('💥 Error fetching Fireberry data:', error);
