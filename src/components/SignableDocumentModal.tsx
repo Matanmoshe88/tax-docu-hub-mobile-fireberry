@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PenTool, RotateCcw, Check, FileSignature, Loader2, AlertCircle, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { logPoaEvent } from '@/lib/poaLogger';
 import { 
   getSmsData, 
   getOtpVerificationData, 
@@ -187,6 +188,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     ctx.strokeStyle = '#1e40af';
     ctx.lineTo(x, y);
     ctx.stroke();
+    if (!hasSignature) logPoaEvent('poa_signature_started');
     setHasSignature(true);
   };
   const stopDrawing = () => {
@@ -199,6 +201,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasSignature(false);
+    logPoaEvent('poa_signature_cleared');
   };
   // Helper: Convert base64 to Blob
   const base64ToBlob = (base64: string, mimeType: string): Blob => {
@@ -361,6 +364,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   };
 
   const handleSign = async () => {
+    logPoaEvent('poa_sign_clicked');
     if (!hasSignature) {
       toast({
         title: "חתימה נדרשת",
@@ -385,6 +389,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     }
 
     if (pixelCount < 100) {
+      logPoaEvent('poa_signature_too_small', { pixelCount });
       toast({
         title: "החתימה קטנה מדי",
         description: "אנא חתום שוב בצורה ברורה יותר",
@@ -414,23 +419,50 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
 
       // 2. Convert to blob and upload signature
       const signatureBlob = await fetch(signatureDataURL).then(r => r.blob());
-      await uploadSignatureToStorage(signatureBlob);
+      try {
+        await uploadSignatureToStorage(signatureBlob);
+        logPoaEvent('poa_signature_uploaded');
+      } catch (err) {
+        logPoaEvent('poa_signature_upload_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 2: Signature uploaded to storage');
 
       // 3. Sign the PDF with signature overlay
-      const signedPdfBase64 = await signPdfWithSignature(pdfData, signatureDataURL);
+      let signedPdfBase64: string;
+      try {
+        signedPdfBase64 = await signPdfWithSignature(pdfData, signatureDataURL);
+        logPoaEvent('poa_pdf_signed');
+      } catch (err) {
+        logPoaEvent('poa_pdf_sign_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 3: PDF signed');
 
       // 4. Upload signed PDF to storage
       const signedPdfBlob = base64ToBlob(signedPdfBase64, 'application/pdf');
-      const signedPdfUrl = await uploadSignedPdfToStorage(signedPdfBlob);
+      let signedPdfUrl: string;
+      try {
+        signedPdfUrl = await uploadSignedPdfToStorage(signedPdfBlob);
+        logPoaEvent('poa_signed_pdf_uploaded');
+      } catch (err) {
+        logPoaEvent('poa_signed_pdf_upload_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 4: Signed PDF uploaded');
 
       // 5. Update Fireberry
-      await updateFireberryDocument(signedPdfUrl);
+      try {
+        await updateFireberryDocument(signedPdfUrl);
+        logPoaEvent('poa_fireberry_updated');
+      } catch (err) {
+        logPoaEvent('poa_fireberry_update_failed', undefined, err);
+        throw err;
+      }
       console.log('✅ Step 5: Fireberry updated');
 
       // 6. Success!
+      logPoaEvent('poa_flow_completed');
       toast({
         title: "המסמך נחתם בהצלחה! 🎉",
         description: "יפוי כח מס הכנסה נשמר במערכת"
@@ -524,9 +556,10 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
                 <div className="inline-block min-w-full" style={{ width: pdfScale > 1 ? `${Math.min(containerWidth, 550) * pdfScale}px` : 'auto' }}>
                   <Document file={`data:application/pdf;base64,${pdfData}`} onLoadSuccess={({
                 numPages
-              }) => setNumPages(numPages)} onLoadError={error => {
+              }) => { setNumPages(numPages); logPoaEvent('poa_pdf_rendered', { numPages }); }} onLoadError={error => {
                 console.error('PDF load error:', error);
                 setPdfError('שגיאה בטעינת המסמך');
+                logPoaEvent('poa_pdf_render_failed', undefined, error);
               }} loading={<div className="flex items-center justify-center min-h-[300px]">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       </div>} className="flex justify-center">

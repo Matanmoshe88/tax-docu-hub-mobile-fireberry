@@ -230,6 +230,39 @@ export type Database = {
         }
         Relationships: []
       }
+      poa_flow_logs: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          error: string | null
+          event: string
+          id: string
+          payload: Json | null
+          record_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          error?: string | null
+          event: string
+          id?: string
+          payload?: Json | null
+          record_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          error?: string | null
+          event?: string
+          id?: string
+          payload?: Json | null
+          record_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           id: string

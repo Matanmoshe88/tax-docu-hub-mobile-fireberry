@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useFireberryData } from '@/hooks/useFireberryData';
 import { jsPDF } from 'jspdf';
  import { SignableDocumentModal } from '@/components/SignableDocumentModal';
+import { logPoaEvent } from '@/lib/poaLogger';
 
 interface Document {
   id: string;
@@ -82,6 +83,8 @@ export const DocumentsPage: React.FC = () => {
        poaFetchAttempted.current = true;  // Mark as attempted immediately
        
        console.log('📄 Pre-fetching POA PDF for recordId:', recordId);
+       logPoaEvent('poa_page_loaded', { recordId });
+       logPoaEvent('poa_prefetch_started');
        setPoaPdfLoading(true);
        setPoaPdfError(null);
        
@@ -94,10 +97,12 @@ export const DocumentsPage: React.FC = () => {
            
            console.log('✅ POA PDF pre-fetched successfully');
            setPoaPdfData(data.data.pdf);
+           logPoaEvent('poa_prefetch_succeeded');
          })
          .catch((err) => {
            console.error('❌ POA PDF pre-fetch error:', err);
            setPoaPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
+           logPoaEvent('poa_prefetch_failed', undefined, err);
          })
          .finally(() => {
            setPoaPdfLoading(false);
@@ -621,7 +626,7 @@ export const DocumentsPage: React.FC = () => {
              className={`shadow-card hover:shadow-lg transition-all relative ${
                poaSigned ? 'ring-2 ring-success/20 bg-success/5' : 'ring-2 ring-primary/30 bg-primary/5 hover:ring-primary/50 cursor-pointer'
              }`}
-             onClick={() => !poaSigned && setPoaModalOpen(true)}
+             onClick={() => { if (!poaSigned) { logPoaEvent('poa_modal_opened'); setPoaModalOpen(true); } }}
            >
              {/* Locked overlay when signed - same design as other documents */}
              {poaSigned && (
@@ -785,7 +790,7 @@ export const DocumentsPage: React.FC = () => {
          {/* Signable Document Modal */}
          <SignableDocumentModal
            open={poaModalOpen}
-           onOpenChange={setPoaModalOpen}
+           onOpenChange={(open) => { if (!open && !poaSigned) logPoaEvent('poa_modal_closed_unsigned'); setPoaModalOpen(open); }}
            recordId={recordId || ''}
            clientData={{
              firstName: clientData?.firstName || '',
