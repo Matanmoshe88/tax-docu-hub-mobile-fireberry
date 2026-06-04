@@ -42,6 +42,10 @@ interface SignableDocumentModalProps {
   // Prefix for the uploaded signature/signed-PDF filenames in Supabase storage.
   // Defaults to 'poa' so POA files keep their existing names.
   filePrefix?: string;
+  // If set (e.g. 1301), after the merged signed PDF is saved this edge function is
+  // invoked FIRE-AND-FORGET to split it per year + create CRM records. When set, the
+  // synchronous merged document-upload is skipped (the client doesn't wait for it).
+  distributeFunctionName?: string;
 }
 export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   open,
@@ -56,7 +60,8 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   generateFunctionName = 'generate-poa-pdf',
   signFunctionName = 'sign-poa-pdf',
   documentType = 'poa_tax_auth',
-  filePrefix = 'poa'
+  filePrefix = 'poa',
+  distributeFunctionName
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -469,15 +474,34 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       }
       console.log('✅ Step 4: Signed PDF uploaded');
 
-      // 5. Update Fireberry
-      try {
-        await updateFireberryDocument(signedPdfUrl);
-        logPoaEvent('poa_fireberry_updated');
-      } catch (err) {
-        logPoaEvent('poa_fireberry_update_failed', undefined, err);
-        throw err;
+      // 5. Hand off to Fireberry.
+      //    - 1301 (distributeFunctionName set): the merged file is already saved, so
+      //      the client is DONE. Trigger the distribution FIRE-AND-FORGET — split the
+      //      merged PDF into per-year files + create one 1301 record per year (+ audit)
+      //      in the background. The client does NOT wait for this.
+      //    - POA (no distributeFunctionName): update the single merged document
+      //      synchronously, as before.
+      if (distributeFunctionName) {
+        // not awaited — runs in the background (the edge fn uses waitUntil)
+        void supabase.functions.invoke(distributeFunctionName, {
+          body: {
+            signedPdfUrl,
+            pages: pdfPages,
+            recordId,
+            clientName: `${clientData.firstName} ${clientData.lastName}`.trim(),
+          },
+        });
+        console.log('✅ Step 5: distribution triggered (background, not awaited)');
+      } else {
+        try {
+          await updateFireberryDocument(signedPdfUrl);
+          logPoaEvent('poa_fireberry_updated');
+        } catch (err) {
+          logPoaEvent('poa_fireberry_update_failed', undefined, err);
+          throw err;
+        }
+        console.log('✅ Step 5: Fireberry updated');
       }
-      console.log('✅ Step 5: Fireberry updated');
 
       // 6. Success!
       logPoaEvent('poa_flow_completed');
