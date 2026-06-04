@@ -59,7 +59,13 @@ export const DocumentsPage: React.FC = () => {
    const [poaPdfLoading, setPoaPdfLoading] = useState(false);
    const [poaPdfError, setPoaPdfError] = useState<string | null>(null);
    const poaFetchAttempted = useRef(false);  // Track if fetch was attempted to prevent infinite loop
- 
+
+   // State for the 1301 report signable document.
+   // IMPORTANT: renders ON CARD CLICK (no page-load prefetch) — the modal fetches
+   // the PDF itself when opened (no prefetched* props are passed below).
+   const [form1301ModalOpen, setForm1301ModalOpen] = useState(false);
+   const [form1301Signed, setForm1301Signed] = useState(false);
+
    // Load POA signed status from session storage on mount
    useEffect(() => {
      const documentsStatus = sessionStorage.getItem('documentsStatus');
@@ -670,7 +676,57 @@ export const DocumentsPage: React.FC = () => {
                </div>
              </CardContent>
            </Card>
- 
+
+           {/* 1301 Report Signable Document Card — directly below the POA card.
+               Same design as POA; opens its own modal which renders on click. */}
+           <Card
+             className={`shadow-card hover:shadow-lg transition-all relative ${
+               form1301Signed ? 'ring-2 ring-success/20 bg-success/5' : 'ring-2 ring-primary/30 bg-primary/5 hover:ring-primary/50 cursor-pointer'
+             }`}
+             onClick={() => { if (!form1301Signed) { setForm1301ModalOpen(true); } }}
+           >
+             {form1301Signed && (
+               <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-lg z-10 flex items-center justify-center">
+                 <div className="text-center space-y-2">
+                   <div className="flex justify-center">
+                     <Lock className="h-8 w-8 text-success" />
+                   </div>
+                   <h3 className="font-semibold text-lg">דוח לחתימה</h3>
+                   <p className="text-sm text-muted-foreground">המסמך נחתם בהצלחה</p>
+                 </div>
+               </div>
+             )}
+
+             <CardContent className="p-6">
+               <div className="flex items-start gap-4">
+                 <div className={`p-3 rounded-lg ${form1301Signed ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
+                   <FileSignature className="h-6 w-6" />
+                 </div>
+
+                 <div className="flex-1">
+                   <div className="flex items-start justify-between">
+                     <div>
+                       <div className="flex items-center gap-2">
+                         <h3 className="font-semibold text-lg">דוח לחתימה</h3>
+                       </div>
+                       <div className="flex items-center gap-2 mt-1">
+                         <PenTool className="h-4 w-4 text-primary" />
+                         <span className="text-primary font-medium text-sm">לחץ לחתימה</span>
+                       </div>
+                       <Badge variant="outline" className="text-xs mt-2 border-primary/30 text-primary">
+                         נדרש חתימה
+                       </Badge>
+                     </div>
+
+                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                       <PenTool className="h-4 w-4 text-primary" />
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
+
           {documents.map((doc) => (
             <Card 
               key={doc.id} 
@@ -802,6 +858,25 @@ export const DocumentsPage: React.FC = () => {
            prefetchedPdfData={poaPdfData}
            prefetchedPdfLoading={poaPdfLoading}
            prefetchedPdfError={poaPdfError}
+         />
+
+         {/* 1301 Report Signable Modal — NO prefetched props, so it fetches the PDF
+             when opened (renders on card click). Multi-page "sign once → stamp all". */}
+         <SignableDocumentModal
+           open={form1301ModalOpen}
+           onOpenChange={setForm1301ModalOpen}
+           recordId={recordId || ''}
+           clientData={{
+             firstName: clientData?.firstName || '',
+             lastName: clientData?.lastName || '',
+             idNumber: clientData?.idNumber || '',
+             phone: clientData?.phone,
+           }}
+           onSigned={() => setForm1301Signed(true)}
+           documentTitle="דוח לחתימה"
+           generateFunctionName="generate-1301-pdf"
+           signFunctionName="sign-1301-pdf"
+           documentType="form_1301"
          />
       </div>
     </PortalLayout>
