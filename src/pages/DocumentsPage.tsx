@@ -81,7 +81,22 @@ export const DocumentsPage: React.FC = () => {
        }
      }
    }, [recordId, isDataFresh]);
-   
+
+   // Check on load whether the 1301 was already signed, so the card shows as
+   // locked/signed after a refresh. "Signed" = the audit record ("אימות חתימה")
+   // exists in the Fireberry 1301 object (1046) for this Opportunity.
+   useEffect(() => {
+     if (!recordId) return;
+     supabase.functions.invoke('check-1301-signed', { body: { recordId } })
+       .then(({ data, error }) => {
+         if (!error && data?.signed) {
+           console.log('✅ 1301 already signed (audit record found in Fireberry)');
+           setForm1301Signed(true);
+         }
+       })
+       .catch((err) => console.warn('check-1301-signed failed:', err));
+   }, [recordId]);
+
    // Pre-fetch POA PDF on page load (only if not already signed)
    useEffect(() => {
      // Only attempt fetch once per page load to prevent infinite loop
