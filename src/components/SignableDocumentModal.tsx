@@ -33,6 +33,12 @@ interface SignableDocumentModalProps {
   prefetchedPdfData?: string | null;
   prefetchedPdfLoading?: boolean;
   prefetchedPdfError?: string | null;
+  // Document configuration (defaults to POA so existing usage is unchanged).
+  // Pass these to reuse this modal for another document (e.g. the 1301 report).
+  documentTitle?: string;
+  generateFunctionName?: string;
+  signFunctionName?: string;
+  documentType?: string;
 }
 export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   open,
@@ -42,7 +48,11 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   onSigned,
   prefetchedPdfData,
   prefetchedPdfLoading,
-  prefetchedPdfError
+  prefetchedPdfError,
+  documentTitle = 'יפוי כח מס הכנסה',
+  generateFunctionName = 'generate-poa-pdf',
+  signFunctionName = 'sign-poa-pdf',
+  documentType = 'poa_tax_auth'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,6 +62,8 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  // Per-page signature boxes (from generate-1301-pdf). Empty for single-page POA.
+  const [pdfPages, setPdfPages] = useState<Array<{ page: number; year?: number; signature: { x: number; y: number; width: number; height: number } }> | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -105,8 +117,8 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       setPdfError(null);
       const fetchPdf = async () => {
         try {
-          console.log('📄 Fetching POA PDF for recordId:', recordId);
-          const { data, error } = await supabase.functions.invoke('generate-poa-pdf', {
+          console.log(`📄 Fetching ${documentTitle} PDF for recordId:`, recordId);
+          const { data, error } = await supabase.functions.invoke(generateFunctionName, {
             body: { recordId, responseType: 'base64' }
           });
           if (error) throw error;
@@ -114,6 +126,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
 
           console.log('✅ PDF loaded successfully');
           setPdfData(data.data.pdf);
+          if (data.data.pages) setPdfPages(data.data.pages);
         } catch (err) {
           console.error('❌ PDF fetch error:', err);
           setPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
@@ -126,6 +139,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       // Reset state when modal closes
       setHasSignature(false);
       setPdfData(null);
+      setPdfPages(null);
       setPdfError(null);
       setCurrentPage(1);
       setNumPages(0);
@@ -282,14 +296,14 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
 
     console.log('📋 Audit data for POA:', auditData);
     
-    const { data, error } = await supabase.functions.invoke('sign-poa-pdf', {
-      body: {
-        pdfBase64: unsignedPdfBase64,
-        signatureDataUrl,
-        signaturePosition: { x: 232, y: 445 },
-        signatureSize: { width: 150, height: 75 },
-        auditData
-      }
+    // Multi-page documents (e.g. 1301) provide per-page signature boxes → stamp
+    // the same signature on every page. Single-page POA uses a fixed position.
+    const signBody = (pdfPages && pdfPages.length > 0)
+      ? { pdfBase64: unsignedPdfBase64, signatureDataUrl, pages: pdfPages, auditData }
+      : { pdfBase64: unsignedPdfBase64, signatureDataUrl, signaturePosition: { x: 232, y: 445 }, signatureSize: { width: 150, height: 75 }, auditData };
+
+    const { data, error } = await supabase.functions.invoke(signFunctionName, {
+      body: signBody
     });
 
     if (error) {
@@ -344,7 +358,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
     const { data, error } = await supabase.functions.invoke('document-upload', {
       body: {
         docid,
-        documentType: 'poa_tax_auth',
+        documentType: documentType,
         documentUrl: pdfUrl
       }
     });
@@ -465,7 +479,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       logPoaEvent('poa_flow_completed');
       toast({
         title: "המסמך נחתם בהצלחה! 🎉",
-        description: "יפוי כח מס הכנסה נשמר במערכת"
+        description: `${documentTitle} נשמר במערכת`
       });
 
       onSigned?.();
@@ -498,7 +512,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 text-xl font-semibold">
                <FileSignature className="h-6 w-6 text-primary" />
-               יפוי כח מס הכנסה
+               {documentTitle}
             </div>
             {/* Zoom Controls - inline with header */}
             {pdfData && !isLoadingPdf && !pdfError && (
