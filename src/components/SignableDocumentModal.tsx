@@ -39,6 +39,9 @@ interface SignableDocumentModalProps {
   generateFunctionName?: string;
   signFunctionName?: string;
   documentType?: string;
+  // Prefix for the uploaded signature/signed-PDF filenames in Supabase storage.
+  // Defaults to 'poa' so POA files keep their existing names.
+  filePrefix?: string;
 }
 export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   open,
@@ -52,7 +55,8 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   documentTitle = 'יפוי כח מס הכנסה',
   generateFunctionName = 'generate-poa-pdf',
   signFunctionName = 'sign-poa-pdf',
-  documentType = 'poa_tax_auth'
+  documentType = 'poa_tax_auth',
+  filePrefix = 'poa'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -231,7 +235,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   // Helper: Upload signature to Supabase storage
   const uploadSignatureToStorage = async (signatureBlob: Blob): Promise<string> => {
     const timestamp = Date.now();
-    const fileName = `poa-signature-${recordId}-${timestamp}.png`;
+    const fileName = `${filePrefix}-signature-${recordId}-${timestamp}.png`;
     
     const { data, error } = await supabase.storage
       .from('signatures')
@@ -322,7 +326,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   // Helper: Upload signed PDF to Supabase storage
   const uploadSignedPdfToStorage = async (pdfBlob: Blob): Promise<string> => {
     const timestamp = Date.now();
-    const fileName = `poa-signed-${recordId}-${timestamp}.pdf`;
+    const fileName = `${filePrefix}-signed-${recordId}-${timestamp}.pdf`;
     
     const { data, error } = await supabase.storage
       .from('signatures')

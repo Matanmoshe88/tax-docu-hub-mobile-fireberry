@@ -877,6 +877,7 @@ export const DocumentsPage: React.FC = () => {
            generateFunctionName="generate-1301-pdf"
            signFunctionName="sign-1301-pdf"
            documentType="form_1301"
+           filePrefix="form1301"
          />
       </div>
     </PortalLayout>
