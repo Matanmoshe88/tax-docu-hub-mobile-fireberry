@@ -263,6 +263,54 @@ export type Database = {
         }
         Relationships: []
       }
+      signing_jobs: {
+        Row: {
+          attempts: number
+          audit_data: Json | null
+          created_at: string
+          document_type: string
+          error: string | null
+          id: string
+          pages: Json
+          record_id: string
+          signature_path: string | null
+          signed_pdf_url: string | null
+          status: string
+          unsigned_pdf_path: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          audit_data?: Json | null
+          created_at?: string
+          document_type?: string
+          error?: string | null
+          id?: string
+          pages: Json
+          record_id: string
+          signature_path?: string | null
+          signed_pdf_url?: string | null
+          status?: string
+          unsigned_pdf_path: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          audit_data?: Json | null
+          created_at?: string
+          document_type?: string
+          error?: string | null
+          id?: string
+          pages?: Json
+          record_id?: string
+          signature_path?: string | null
+          signed_pdf_url?: string | null
+          status?: string
+          unsigned_pdf_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           id: string
