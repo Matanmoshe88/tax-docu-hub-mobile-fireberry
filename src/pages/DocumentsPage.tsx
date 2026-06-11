@@ -894,6 +894,7 @@ export const DocumentsPage: React.FC = () => {
            documentType="form_1301"
            filePrefix="form1301"
            distributeFunctionName="distribute-1301"
+           submitFunctionName="submit-1301-signature"
          />
       </div>
     </PortalLayout>

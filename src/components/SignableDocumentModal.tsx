@@ -46,6 +46,14 @@ interface SignableDocumentModalProps {
   // invoked FIRE-AND-FORGET to split it per year + create CRM records. When set, the
   // synchronous merged document-upload is skipped (the client doesn't wait for it).
   distributeFunctionName?: string;
+  // ASYNC SIGNING ("sign & go"). If set (e.g. submit-1301-signature) AND the
+  // generate function returned an unsignedPdfPath, signing becomes ONE small call:
+  // signature PNG + audit JSON + storage pointers → the server records the signing
+  // event, answers in ~1s (green light), and does ALL heavy work (stamping, audit
+  // page, splitting, CRM records) in the background. signFunctionName /
+  // distributeFunctionName then serve only as the legacy fallback when
+  // unsignedPdfPath is missing.
+  submitFunctionName?: string;
 }
 export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   open,
@@ -61,7 +69,8 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   signFunctionName = 'sign-poa-pdf',
   documentType = 'poa_tax_auth',
   filePrefix = 'poa',
-  distributeFunctionName
+  distributeFunctionName,
+  submitFunctionName
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,6 +82,9 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   const [pdfError, setPdfError] = useState<string | null>(null);
   // Per-page signature boxes (from generate-1301-pdf). Empty for single-page POA.
   const [pdfPages, setPdfPages] = useState<Array<{ page: number; year?: number; signature: { x: number; y: number; width: number; height: number } }> | null>(null);
+  // Storage path of the unsigned PDF copy (from generate-1301-pdf) — enables the
+  // async "sign & go" flow. null → legacy flow.
+  const [unsignedPdfPath, setUnsignedPdfPath] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -136,6 +148,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
           console.log('✅ PDF loaded successfully');
           setPdfData(data.data.pdf);
           if (data.data.pages) setPdfPages(data.data.pages);
+          if (data.data.unsignedPdfPath) setUnsignedPdfPath(data.data.unsignedPdfPath);
         } catch (err) {
           console.error('❌ PDF fetch error:', err);
           setPdfError(err instanceof Error ? err.message : 'שגיאה בטעינת המסמך');
@@ -149,6 +162,7 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       setHasSignature(false);
       setPdfData(null);
       setPdfPages(null);
+      setUnsignedPdfPath(null);
       setPdfError(null);
       setCurrentPage(1);
       setNumPages(0);
@@ -260,6 +274,61 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
 
     console.log('✅ Signature uploaded:', publicUrl.publicUrl);
     return publicUrl.publicUrl;
+  };
+
+  // Helper: gather the audit metadata collected locally during the session.
+  // NOTE: no ipAddress here — in the async flow the server captures it from the
+  // request headers (x-forwarded-for), removing the old serial get-client-ip call.
+  const gatherAuditData = () => {
+    const smsData = getSmsData();
+    const otpData = getOtpVerificationData();
+    const deviceInfo = captureDeviceInfo();
+    return {
+      clientName: `${clientData.firstName} ${clientData.lastName}`,
+      clientId: clientData.idNumber,
+      clientPhone: clientData.phone || otpData.phone || '',
+      smsSentTime: smsData.smsSentTime,
+      smsProviderStatusId: smsData.smsProviderStatusId ?? undefined,
+      smsProviderStatusDescription: smsData.smsProviderStatusDescription ?? undefined,
+      otpCodeEntered: otpData.codeEntered,
+      otpVerified: !!otpData.verificationTimeIso,
+      otpVerificationTime: otpData.verificationTimeIso,
+      contractViewedAt: getContractViewedAtIso(),
+      signatureSubmittedAt: new Date().toISOString(),
+      timeSpentReadingSeconds: calculateReadingTime(),
+      browserName: deviceInfo.browserName,
+      operatingSystem: deviceInfo.operatingSystem,
+      screenResolution: deviceInfo.screenResolution,
+      timezone: deviceInfo.timezone,
+      recordId,
+    };
+  };
+
+  // Helper: ASYNC "sign & go" submission — ONE small call (~20 KB signature PNG +
+  // audit JSON + storage pointers). The server durably records the signing event
+  // and answers immediately; stamping, audit page, splitting and CRM records all
+  // run server-side in the background. The 2.5 MB PDF never crosses the client's
+  // connection again (it used to cross 3 times → the ~12s wait).
+  const submitSignatureAsync = async (signatureDataUrl: string): Promise<void> => {
+    console.log(`🚀 Async signing via ${submitFunctionName}...`);
+    const { data, error } = await supabase.functions.invoke(submitFunctionName!, {
+      body: {
+        recordId,
+        unsignedPdfPath,
+        pages: pdfPages,
+        signatureDataUrl,
+        auditData: gatherAuditData(),
+        clientName: `${clientData.firstName} ${clientData.lastName}`.trim(),
+      },
+    });
+    if (error) {
+      console.error('❌ Async submit error:', error);
+      throw new Error('שגיאה בשליחת החתימה');
+    }
+    if (!data?.success) {
+      throw new Error(data?.error || 'שגיאה בשליחת החתימה');
+    }
+    console.log('✅ Signing event recorded, jobId:', data.jobId);
   };
 
   // Helper: Call sign-poa-pdf edge function with audit trail
@@ -439,6 +508,29 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
       // 1. Get signature as data URL
       const signatureDataURL = canvas.toDataURL('image/png');
       console.log('✅ Step 1: Signature captured');
+
+      // ── ASYNC "SIGN & GO" FLOW (e.g. 1301) ──
+      // One small call; the server answers in ~1s and assembles + distributes the
+      // signed documents in the background. Skips every heavy legacy step below.
+      if (submitFunctionName && unsignedPdfPath && pdfPages && pdfPages.length > 0) {
+        try {
+          await submitSignatureAsync(signatureDataURL);
+          logPoaEvent('poa_flow_completed');
+        } catch (err) {
+          logPoaEvent('poa_pdf_sign_failed', undefined, err);
+          throw err;
+        }
+
+        toast({
+          title: "המסמך נחתם בהצלחה! 🎉",
+          description: `${documentTitle} נשמר במערכת`
+        });
+        onSigned?.();
+        onOpenChange(false);
+        return;
+      }
+
+      // ── LEGACY FLOW (POA, or 1301 fallback when unsignedPdfPath is missing) ──
 
       // 2. Convert to blob and upload signature
       const signatureBlob = await fetch(signatureDataURL).then(r => r.blob());

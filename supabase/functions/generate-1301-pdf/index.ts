@@ -23,6 +23,10 @@
  * RESPONSE (success):
  *   { "success": true, "data": {
  *       "pdf": "JVBERi0...",                       // base64 of the merged PDF
+ *       "unsignedPdfPath": "form1301-unsigned-<id>-<ts>.pdf",  // copy in 'signatures'
+ *                                                  // bucket, used by submit-1301-signature
+ *                                                  // (null if the copy upload failed →
+ *                                                  // modal falls back to legacy flow)
  *       "pages": [ { "page":1, "year":2025, "signature":{x,y,width,height} }, ... ],
  *       "pageCount": 6,
  *       "skippedYears": [2026],                     // contract years without a template/map
@@ -40,6 +44,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3?pin=v135'
 
 // Public Function URL of the AWS Lambda `form1301Generator` (auth=NONE).
 // The Lambda validates recordId against Fireberry on every call.
@@ -119,12 +124,38 @@ serve(async (req) => {
     const pdfBase64 = toBase64(pdfBytes)
     console.log(`✅ 1301 PDF fetched (${(pdfBytes.length / 1024 / 1024).toFixed(1)} MB) and base64-encoded`)
 
-    // 3) Return base64 + the per-page signature boxes for the signing step.
+    // 3) Keep an UNSIGNED copy in storage for the async signing flow:
+    //    submit-1301-signature fetches it server-side by this path, so the client
+    //    never uploads the PDF back (the old 12s post-signature wait). Best-effort:
+    //    if the upload fails, unsignedPdfPath is null and the modal falls back to
+    //    the legacy sign-1301-pdf flow.
+    let unsignedPdfPath: string | null = null
+    try {
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      )
+      const path = `form1301-unsigned-${recordId}-${Date.now()}.pdf`
+      const { error: upErr } = await supabase.storage
+        .from('signatures')
+        .upload(path, new Blob([pdfBytes], { type: 'application/pdf' }), {
+          contentType: 'application/pdf',
+          upsert: false,
+        })
+      if (upErr) throw upErr
+      unsignedPdfPath = path
+      console.log(`✅ unsigned copy stored: ${path}`)
+    } catch (e) {
+      console.error('⚠️ failed to store unsigned copy (legacy sign flow will be used):', e)
+    }
+
+    // 4) Return base64 + the per-page signature boxes for the signing step.
     return json(
       {
         success: true,
         data: {
           pdf: pdfBase64,
+          unsignedPdfPath,
           pages: data.pages,
           pageCount: data.pageCount,
           skippedYears: data.skippedYears,
