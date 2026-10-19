@@ -423,36 +423,24 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
   };
 
   // Helper: Update Fireberry with document URL
-  const updateFireberryDocument = async (pdfUrl: string): Promise<void> => {
-    const docid = sessionStorage.getItem('docid');
-    
-    if (!docid) {
-      console.warn('⚠️ No docid found in sessionStorage - skipping Fireberry update');
-      return;
-    }
-
-    console.log('📤 Updating Fireberry document...', { docid, pdfUrl });
+  const updateFireberryDocument = async (pdfUrl: string): Promise<boolean> => {
+    // docid may be missing (e.g. contract step skipped / new tab) — server resolves it by recordId
+    const docid = sessionStorage.getItem('docid') || undefined;
 
     const { data, error } = await supabase.functions.invoke('document-upload', {
-      body: {
-        docid,
-        documentType: documentType,
-        documentUrl: pdfUrl
-      }
+      body: { docid, recordId, documentType, documentUrl: pdfUrl },
     });
 
-    if (error) {
-      console.error('❌ Fireberry update error:', error);
-      // Don't throw - document is still saved to storage
+    if (error || !data?.success) {
+      console.error('❌ Fireberry update error:', error || data);
       toast({
         title: "אזהרה",
         description: "המסמך נשמר אך לא עודכן במערכת הניהול",
         variant: "destructive"
       });
-      return;
+      return false;
     }
-
-    console.log('✅ Fireberry updated successfully:', data);
+    return true;
   };
 
   const handleSign = async () => {
@@ -586,8 +574,9 @@ export const SignableDocumentModal: React.FC<SignableDocumentModalProps> = ({
         console.log('✅ Step 5: distribution triggered (background, not awaited)');
       } else {
         try {
-          await updateFireberryDocument(signedPdfUrl);
-          logPoaEvent('poa_fireberry_updated');
+          const ok = await updateFireberryDocument(signedPdfUrl);
+          if (ok) logPoaEvent('poa_fireberry_updated');
+          else logPoaEvent('poa_fireberry_update_failed', { hadDocid: !!sessionStorage.getItem('docid') });
         } catch (err) {
           logPoaEvent('poa_fireberry_update_failed', undefined, err);
           throw err;
