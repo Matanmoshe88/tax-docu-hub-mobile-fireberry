@@ -47,8 +47,24 @@ interface DocumentsSingle {
 
 export const DocumentsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { clientData, isLoading, recordId, isDataFresh } = useFireberryData();
+  const { clientData, isLoading, recordId, isDataFresh, shouldRedirect } = useFireberryData();
   const { toast } = useToast();
+
+  // Guard: the contract must be signed before documents (POA / 1301 / uploads).
+  // shouldRedirect === true means Fireberry already holds a signed contract for this record.
+  useEffect(() => {
+    if (isLoading || !isDataFresh || !recordId) return;
+    const signedLocally = !!localStorage.getItem(`signature-${recordId}`);
+    if (!shouldRedirect && !signedLocally) {
+      logPoaEvent('documents_blocked_contract_unsigned');
+      toast({
+        title: "יש לחתום על ההסכם",
+        description: "יש לחתום על הסכם השירות לפני השלמת המסמכים",
+        variant: "destructive",
+      });
+      navigate(`/contract/${recordId}`, { replace: true });
+    }
+  }, [isLoading, isDataFresh, recordId, shouldRedirect, navigate, toast]);
   
    // State for POA TaxAuth signable document
    const [poaModalOpen, setPoaModalOpen] = useState(false);

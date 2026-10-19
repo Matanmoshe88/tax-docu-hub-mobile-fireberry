@@ -89,10 +89,43 @@ serve(async (req) => {
       console.log('📝 Request body:', JSON.stringify(body, null, 2));
     }
 
-    const { docid, documentType, documentUrl } = body;
+    const { documentType, documentUrl } = body;
+    const recordId = (body as any).recordId as string | undefined;
+    let docid = body.docid;
 
-    if (!docid || !documentType || !documentUrl) {
-      throw new Error('Missing required fields: docid, documentType, documentUrl');
+    if (!documentType || !documentUrl || (!docid && !recordId)) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing required fields: documentType, documentUrl and docid or recordId' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400,
+      });
+    }
+
+    if (!docid && recordId) {
+      if (!/^[0-9a-f-]{36}$/i.test(recordId)) {
+        return new Response(JSON.stringify({ success: false, error: 'Invalid recordId' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400,
+        });
+      }
+      const q = await fetch('https://api.powerlink.co.il/api/query', {
+        method: 'POST',
+        headers: { 'TokenId': Deno.env.get('FIREBERRY_TOKEN_ID') || '', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          objecttype: '1004',
+          page_size: 50,
+          page_number: 1,
+          query: `(pcfsystemfield693 = ${recordId})`,
+          fields: 'customobject1004id,createdon',
+          sort_by: 'createdon',
+          sort_type: 'desc',
+        }),
+      });
+      const qj = await q.json().catch(() => null) as any;
+      docid = qj?.data?.Data?.[0]?.customobject1004id;
+      console.log(`🔎 Resolved docid by recordId: ${docid || 'none'}`);
+      if (!docid) {
+        return new Response(JSON.stringify({ success: false, error: 'No Fireberry document found for this record' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404,
+        });
+      }
     }
 
     console.log('🔄 Starting document URL update...');
