@@ -19,7 +19,7 @@ interface FireberryResponse {
       pcfsystemfield813: number; // amount no vat
       pcfsystemfield819: number; // amount to pay
       pcfsystemfield811: number; // payment status (1=not paid, 2/3=paid)
-      pcfsystemfield826?: number | string | null; // collection treatment (3=legal)
+      pcfsystemfield826?: number | string | null; // collection treatment (2=legal)
       pcfsystemfield838: string; // CardCom payment URL
       pcfsystemfield770: string; // oppid
       pcfsystemfield767: string; // accountid
