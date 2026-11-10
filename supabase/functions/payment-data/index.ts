@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { isLegalCollection } from '../_shared/legalCollection.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +19,7 @@ interface FireberryResponse {
       pcfsystemfield813: number; // amount no vat
       pcfsystemfield819: number; // amount to pay
       pcfsystemfield811: number; // payment status (1=not paid, 2/3=paid)
+      pcfsystemfield826?: number | string | null; // collection treatment (3=legal)
       pcfsystemfield838: string; // CardCom payment URL
       pcfsystemfield770: string; // oppid
       pcfsystemfield767: string; // accountid
@@ -71,6 +73,7 @@ serve(async (req) => {
       feeBeforeVAT: record.pcfsystemfield813,
       totalPayment: record.pcfsystemfield819,
       paymentStatus: record.pcfsystemfield811,
+      isLegalCollection: isLegalCollection(record.pcfsystemfield826),
       paymentUrl: record.pcfsystemfield838,
     };
 

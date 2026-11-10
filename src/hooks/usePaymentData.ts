@@ -9,6 +9,7 @@ export interface PaymentData {
   feeBeforeVAT: number;
   totalPayment: number;
   paymentStatus: number;
+  isLegalCollection?: boolean;
   paymentUrl: string;
 }
 

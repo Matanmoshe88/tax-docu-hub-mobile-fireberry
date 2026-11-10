@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { isLegalCollection } from '../_shared/legalCollection.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +19,7 @@ interface FireberryRecord {
   pcfsystemfield819: number; // amount
   pcfsystemfield770: string; // oppid
   pcfsystemfield767: string; // accountid
+  pcfsystemfield826?: number | string | null; // collection treatment (3=legal)
 }
 
 interface CardComResponse {
@@ -64,6 +66,14 @@ serve(async (req) => {
     console.log('Fireberry data fetched successfully');
 
     const record: FireberryRecord = fireberryData.data.Record;
+
+    // Check the freshly fetched record before contacting CardCom or updating CRM.
+    if (isLegalCollection(record.pcfsystemfield826)) {
+      return new Response(
+        JSON.stringify({ success: false, code: 'LEGAL_COLLECTION' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+      );
+    }
 
     // Step 2: Create CardCom payment
     console.log('Creating CardCom payment...');
