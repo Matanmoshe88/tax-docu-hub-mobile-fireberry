@@ -1,0 +1,2 @@
+# Architecture rules
+- Evaluate legal collection from fresh Fireberry data in both payment-data and create-payment using the shared strict predicate; the browser consumes the resulting boolean so stale pages cannot bypass the server check.

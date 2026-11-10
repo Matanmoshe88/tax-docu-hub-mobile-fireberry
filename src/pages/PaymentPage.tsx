@@ -44,6 +44,20 @@ export const PaymentPage = () => {
   const [iframeKey, setIframeKey] = useState(Date.now());
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [dynamicPaymentUrl, setDynamicPaymentUrl] = useState<string | null>(null);
+  const [legalCollectionBlocked, setLegalCollectionBlocked] = useState(false);
+
+  useEffect(() => {
+    setLegalCollectionBlocked(false);
+    setIsDrawerOpen(false);
+    setDynamicPaymentUrl(null);
+  }, [recordId]);
+
+  useEffect(() => {
+    if (paymentData?.isLegalCollection === true) {
+      setIsDrawerOpen(false);
+      setDynamicPaymentUrl(null);
+    }
+  }, [paymentData?.isLegalCollection]);
 
   // ===== CRITICAL: Cache-busting and fresh load logic =====
   useEffect(() => {
@@ -81,7 +95,7 @@ export const PaymentPage = () => {
   }, [refetch]);
 
   const handlePayment = async () => {
-    if (!recordId) return;
+    if (!recordId || paymentData?.isLegalCollection === true || legalCollectionBlocked) return;
     
     setIsCreatingPayment(true);
     
@@ -95,6 +109,13 @@ export const PaymentPage = () => {
       if (functionError) {
         console.error('Function error:', functionError);
         throw functionError;
+      }
+
+      if (data?.code === 'LEGAL_COLLECTION') {
+        setLegalCollectionBlocked(true);
+        setIsDrawerOpen(false);
+        setDynamicPaymentUrl(null);
+        return;
       }
 
       if (!data.success) {
@@ -135,6 +156,32 @@ export const PaymentPage = () => {
   }
 
   const isPaid = paymentData.paymentStatus !== 1;
+
+  // Keep the existing paid state; show legal treatment only on explicit confirmation.
+  if (!isPaid && (paymentData.isLegalCollection === true || legalCollectionBlocked)) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+        <div className="pt-2 pr-4 md:pt-3 md:pr-6">
+          <img src={quicktaxLogo} alt="QuickTax" className="h-16 md:h-24" />
+        </div>
+        <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
+          <Lock className="w-12 h-12 text-muted-foreground mb-6" aria-hidden="true" />
+          <h1 className="text-xl md:text-2xl font-semibold text-foreground max-w-lg">
+            לא ניתן לשלם את החוב באמצעות קישור זה.
+          </h1>
+          <p className="mt-5 text-base leading-relaxed text-foreground max-w-lg">
+            הטיפול בגביית החוב הועבר למשרד עורכי הדין דור כהן.
+          </p>
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-lg">
+            לבירורים ולהסדרת התשלום, יש ליצור קשר עם המשרד בטלפון:
+          </p>
+          <a href="tel:0775240218" dir="ltr" className="mt-3 text-xl font-semibold text-primary underline underline-offset-4">
+            077-5240218
+          </a>
+        </main>
+      </div>
+    );
+  }
 
   // Use dynamic payment URL if available, otherwise fallback to stored URL
   const paymentUrl = dynamicPaymentUrl || paymentData.paymentUrl;
