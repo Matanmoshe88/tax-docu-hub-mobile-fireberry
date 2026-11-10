@@ -19,7 +19,7 @@ interface FireberryRecord {
   pcfsystemfield819: number; // amount
   pcfsystemfield770: string; // oppid
   pcfsystemfield767: string; // accountid
-  pcfsystemfield826?: number | string | null; // collection treatment (3=legal)
+  pcfsystemfield826?: number | string | null; // collection treatment (2=legal)
 }
 
 interface CardComResponse {
